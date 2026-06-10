@@ -1,0 +1,70 @@
+---
+description: Arquitectura full-stack React + TypeScript, FastAPI y PostgreSQL
+alwaysApply: true
+---
+
+# Stack del proyecto
+
+- **Frontend**: React 18+ con TypeScript (Vite)
+- **Backend**: FastAPI (Python 3.11+)
+- **Base de datos**: PostgreSQL
+
+## Estructura del monorepo
+
+```
+frontend/     # React + TypeScript (Vite)
+backend/      # FastAPI
+  app/
+    api/      # routers por dominio
+    models/   # modelos SQLAlchemy
+    schemas/  # Pydantic (request/response)
+    services/ # lógica de negocio
+    core/     # config, db, seguridad
+```
+
+## Frontend (React + TypeScript)
+
+- Componentes funcionales; extraer lógica reutilizable en custom hooks.
+- Tipos explícitos; evitar `any`. Definir interfaces para props y respuestas de API.
+- Estado servidor con TanStack Query; estado local con `useState`/`useReducer`.
+- Llamadas HTTP centralizadas en `frontend/src/services/` o `frontend/src/api/`.
+- Variables de entorno con prefijo `VITE_` (ej. `VITE_API_URL`).
+
+```typescript
+// ✅ Respuesta tipada
+interface Patient { id: string; name: string; }
+const { data } = useQuery<Patient[]>({ queryKey: ['patients'], queryFn: fetchPatients });
+```
+
+## Backend (FastAPI)
+
+- Routers delgados; lógica en `services/`. Validación con Pydantic en `schemas/`.
+- ORM: SQLAlchemy 2.x con sesiones async (`asyncpg`).
+- Inyección de dependencias para DB y autenticación (`Depends`).
+- Variables sensibles solo en `.env`; nunca en código. Usar `pydantic-settings`.
+- Documentación automática en `/docs`; versionar API bajo `/api/v1`.
+
+```python
+# ✅ Patrón router → service → model
+@router.get("/patients", response_model=list[PatientResponse])
+async def list_patients(db: AsyncSession = Depends(get_db)):
+    return await patient_service.get_all(db)
+```
+
+## PostgreSQL
+
+- Migraciones con Alembic; no modificar el esquema manualmente en producción.
+- Índices en columnas de búsqueda y FKs. Usar `UUID` o `SERIAL` según el dominio.
+- Conexión vía `DATABASE_URL` en `.env` (ej. `postgresql+asyncpg://user:pass@localhost/db`).
+
+## Comunicación frontend ↔ backend
+
+- REST JSON; CORS configurado en FastAPI para el origen del frontend.
+- Manejo de errores consistente: `{ "detail": "mensaje" }` (formato FastAPI).
+- Autenticación: JWT en header `Authorization: Bearer <token>`.
+
+## Convenciones generales
+
+- Nombres en inglés para código; mensajes de UI pueden estar en español.
+- No commitear `.env`, credenciales ni secretos.
+- Cambios mínimos y enfocados; seguir convenciones existentes del directorio.
