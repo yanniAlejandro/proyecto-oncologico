@@ -1,15 +1,20 @@
 """Script para crear usuario administrador inicial."""
+
 import asyncio
 
 from sqlalchemy import select
 
-from app.core.database import async_session
-from app.core.security import hash_password
-from app.models.contact import ContactInfo
-from app.models.disease import Disease
-from app.models.interest_link import InterestLink
-from app.models.news import News
-from app.models.user import User, UserRole
+from app.features.contact.infrastructure.orm import ContactInfoRow as ContactInfo
+from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
+from app.features.interest_links.infrastructure.orm import InterestLinkRow as InterestLink
+from app.features.news.infrastructure.orm import NewsRow as News
+from app.features.users.infrastructure.orm import UserRow as User
+from app.shared.domain.actor import Role as UserRole
+from app.shared.infrastructure import orm_registry  # noqa: F401
+from app.shared.infrastructure.database import async_session
+from app.shared.infrastructure.security import BcryptPasswordHasher
+
+hash_password = BcryptPasswordHasher().hash
 
 
 async def seed():

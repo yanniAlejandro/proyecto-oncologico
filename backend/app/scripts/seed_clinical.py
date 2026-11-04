@@ -1,14 +1,21 @@
 """Carga guías de diagnóstico, protocolos de tratamiento y documentos de ejemplo."""
+
 import asyncio
+import uuid
 
 from sqlalchemy import select
 
-from app.core.database import async_session
-from app.models.diagnostic_guide import DiagnosticGuide
-from app.models.disease import Disease
-from app.models.document import Document
-from app.models.treatment_protocol import TreatmentProtocol
-from app.models.user import User
+from app.features.clinical_content.infrastructure.orm import DiagnosticGuideRow as DiagnosticGuide
+from app.features.clinical_content.infrastructure.orm import TreatmentProtocolRow as TreatmentProtocol
+from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
+from app.features.documents.domain.file_policy import extension_of
+from app.features.documents.infrastructure.local_storage import LocalFileStorage
+from app.features.documents.infrastructure.orm import DocumentRow as Document
+from app.features.users.infrastructure.orm import UserRow as User
+from app.scripts.sample_files import make_docx, make_pdf
+from app.shared.infrastructure import orm_registry  # noqa: F401
+from app.shared.infrastructure.config import settings
+from app.shared.infrastructure.database import async_session
 
 GUIDES = [
     {
@@ -511,9 +518,7 @@ async def seed_clinical():
 
         guides_added = 0
         for item in GUIDES:
-            exists = await db.execute(
-                select(DiagnosticGuide).where(DiagnosticGuide.title == item["title"])
-            )
+            exists = await db.execute(select(DiagnosticGuide).where(DiagnosticGuide.title == item["title"]))
             if exists.scalar_one_or_none():
                 continue
             disease = diseases.get(item["disease"])
@@ -532,9 +537,7 @@ async def seed_clinical():
 
         protocols_added = 0
         for item in PROTOCOLS:
-            exists = await db.execute(
-                select(TreatmentProtocol).where(TreatmentProtocol.title == item["title"])
-            )
+            exists = await db.execute(select(TreatmentProtocol).where(TreatmentProtocol.title == item["title"]))
             if exists.scalar_one_or_none():
                 continue
             disease = diseases.get(item["disease"])
@@ -552,26 +555,35 @@ async def seed_clinical():
             protocols_added += 1
 
         documents_added = 0
+        storage = LocalFileStorage(settings.STORAGE_DIR)
         for item in DOCUMENTS:
-            exists = await db.execute(select(Document).where(Document.title == item["title"]))
-            if exists.scalar_one_or_none():
+            row = (await db.execute(select(Document).where(Document.title == item["title"]))).scalar_one_or_none()
+            if row is not None and row.storage_key:
                 continue
-            db.add(
-                Document(
+            ext = extension_of(item["file_name"])
+            body = f"{item['description']}\n\nDocumento de ejemplo del Hospital Oncológico de La Habana."
+            data = make_pdf(item["title"], body) if ext == ".pdf" else make_docx(item["title"], body)
+            key = f"{uuid.uuid4().hex}{ext}"
+            storage.save(key, data)
+            if row is None:  # alta nueva
+                row = Document(
                     title=item["title"],
                     description=item["description"],
-                    file_name=item["file_name"],
-                    file_url=item["file_url"],
-                    file_type=item["file_type"],
                     uploaded_by=encargado.id if encargado else None,
                 )
-            )
+                db.add(row)
+            # Documentos heredados con URL externa: pasan a tener archivo almacenado.
+            row.file_name = item["file_name"]
+            row.file_type = item["file_type"]
+            row.file_url = None
+            row.storage_key = key
+            row.size_bytes = len(data)
             documents_added += 1
 
         await db.commit()
         print(f"Guías de diagnóstico añadidas: {guides_added}")
         print(f"Protocolos de tratamiento añadidos: {protocols_added}")
-        print(f"Documentos del repositorio añadidos: {documents_added}")
+        print(f"Documentos con archivo almacenado: {documents_added}")
 
 
 if __name__ == "__main__":
