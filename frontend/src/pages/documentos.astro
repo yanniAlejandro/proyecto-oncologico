@@ -1,0 +1,33 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { createDocumentsApi } from "@/features/documents/infrastructure/documents.api";
+import { DocumentsPage } from "@/features/documents/presentation/DocumentsPage";
+import { load, serverTransport } from "@/shared/api/server";
+import { canManageContent } from "@/shared/auth/roles";
+
+const { user, token } = Astro.locals;
+const canManage = canManageContent(user);
+const api = createDocumentsApi(serverTransport(token));
+const documents = await load(() => api.list());
+const policy = canManage ? await load(() => api.uploadPolicy()) : null;
+---
+
+<BaseLayout title="Repositorio de Documentos">
+  {
+    documents.error ? (
+      <>
+        <PageHeader title="Repositorio de Documentos" />
+        <Alert>Error al cargar los documentos: {documents.error}</Alert>
+      </>
+    ) : (
+      <DocumentsPage
+        client:load
+        initialItems={documents.data ?? []}
+        canManage={canManage}
+        policy={policy?.data ?? undefined}
+      />
+    )
+  }
+</BaseLayout>

@@ -1,0 +1,60 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { LoginDialog } from "@/features/auth/presentation/LoginDialog";
+import { createNewsApi } from "@/features/news/infrastructure/news.api";
+import { formatDate, previewText } from "@/lib/format";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { user, token } = Astro.locals;
+const { data, error } = await load(() => createNewsApi(serverTransport(token)).listPublished());
+const news = data ?? [];
+---
+
+<BaseLayout>
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <span class="landing-badge">Bienvenido</span>
+      <h2>Hospital Oncológico de La Habana</h2>
+      <p>
+        Portal de información clínica para profesionales de la salud. Acceda a noticias institucionales, guías de
+        diagnóstico, protocolos de tratamiento y documentación de referencia.
+      </p>
+      {!user && <LoginDialog client:load triggerLabel="Acceso para personal médico" triggerSize="lg" />}
+    </div>
+    <div class="landing-hero-stats">
+      <div class="stat-card">
+        <span class="stat-number">{news.length}</span>
+        <span class="stat-label">Noticias activas</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-number">24/7</span>
+        <span class="stat-label">Recursos disponibles</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-heading">
+    <h3>Noticias institucionales</h3>
+    <p>Comunicados y novedades del hospital</p>
+  </div>
+
+  {error && <Alert>No se pudieron cargar las noticias: {error}</Alert>}
+  <div class="card-grid">
+    {
+      news.map((item) => (
+        <article class="card news-card">
+          <div class="card-accent" />
+          <h3>{item.title}</h3>
+          {item.summary && <p class="summary">{item.summary}</p>}
+          <p class="content-preview">{previewText(item.content)}</p>
+          <footer>
+            <span class="card-date">{formatDate(item.created_at)}</span>
+            {item.author_name && <span class="card-author">{item.author_name}</span>}
+          </footer>
+        </article>
+      ))
+    }
+    {!error && news.length === 0 && <p class="muted">No hay noticias publicadas.</p>}
+  </div>
+</BaseLayout>
