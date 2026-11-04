@@ -117,6 +117,26 @@ cp .env.example .env      # API_URL=http://localhost:8000/api/v1
 pnpm dev                  # http://localhost:4321
 ```
 
+### Día a día (ya instalado)
+
+```bash
+# Arrancar (desde la raíz del repo)
+conda activate oncologico
+pg_ctl -D backend/.pgdata -l backend/.pgdata/server.log -o "-p 5432 -k /tmp" start
+(cd backend && uvicorn app.main:app --reload --port 8000)   # en una terminal
+(cd frontend && pnpm dev)                                     # en otra; si 4321 está ocupado usa el siguiente puerto libre
+
+# Estado
+pg_ctl -D backend/.pgdata status
+curl -s localhost:8000/health
+(cd frontend && pnpm astro dev status)
+
+# Parar
+# uvicorn y pnpm dev: Ctrl+C en su terminal
+(cd frontend && pnpm astro dev stop)   # solo si se lanzó con `pnpm dev --background` (o lo arrancó un agente)
+pg_ctl -D backend/.pgdata stop -m fast # PostgreSQL sigue vivo hasta pararlo explícitamente
+```
+
 ## Tests y calidad
 
 ```bash
