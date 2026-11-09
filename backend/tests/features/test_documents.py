@@ -5,8 +5,8 @@ import pytest
 from app.features.documents.application import use_cases as uc
 from app.features.documents.domain.file_policy import kind_for, sanitize_filename, validate_upload
 from app.features.documents.domain.model import Disposition
-from app.features.documents.infrastructure.local_storage import LocalFileStorage
 from app.shared.domain.result import ErrorKind
+from app.shared.infrastructure.local_storage import LocalFileStorage
 from tests.fakes import ADMIN, DOCTOR, EDITOR, FakeDocuments, FakeStorage
 from tests.helpers import err, ok
 

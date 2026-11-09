@@ -9,13 +9,13 @@ from app.features.clinical_content.infrastructure.orm import DiagnosticGuideRow 
 from app.features.clinical_content.infrastructure.orm import TreatmentProtocolRow as TreatmentProtocol
 from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
 from app.features.documents.domain.file_policy import extension_of
-from app.features.documents.infrastructure.local_storage import LocalFileStorage
 from app.features.documents.infrastructure.orm import DocumentRow as Document
 from app.features.users.infrastructure.orm import UserRow as User
 from app.scripts.sample_files import make_docx, make_pdf
 from app.shared.infrastructure import orm_registry  # noqa: F401
 from app.shared.infrastructure.config import settings
 from app.shared.infrastructure.database import async_session
+from app.shared.infrastructure.local_storage import LocalFileStorage
 
 GUIDES = [
     {

@@ -9,15 +9,12 @@ from app.features.auth.presentation.deps import get_token_service
 from app.features.clinical_content.presentation.router import GUIDE_REPOSITORY, PROTOCOL_REPOSITORY
 from app.features.contact.presentation.router import get_contact_repository
 from app.features.diseases.presentation.deps import get_disease_repository
-from app.features.documents.presentation.router import (
-    get_document_repository,
-    get_file_storage,
-    get_max_upload_bytes,
-)
+from app.features.documents.presentation.router import get_document_repository, get_max_upload_bytes
 from app.features.interest_links.presentation.router import get_link_repository
-from app.features.news.presentation.router import get_news_repository
+from app.features.publications.presentation.router import get_link_previewer, get_publication_repository
 from app.features.users.presentation.deps import get_password_hasher, get_user_repository
 from app.main import create_app
+from app.shared.presentation.storage import get_file_storage
 from tests.fakes import (
     ADMIN,
     DOCTOR,
@@ -28,7 +25,8 @@ from tests.fakes import (
     FakeDocuments,
     FakeHasher,
     FakeLinks,
-    FakeNews,
+    FakePreviewer,
+    FakePublications,
     FakeStorage,
     FakeTokens,
     FakeUsers,
@@ -44,7 +42,8 @@ class World:
     diseases: FakeDiseases
     guides: FakeClinical
     protocols: FakeClinical
-    news: FakeNews
+    publications: FakePublications
+    previewer: FakePreviewer
     documents: FakeDocuments
     storage: FakeStorage
 
@@ -64,7 +63,8 @@ def world(tmp_path) -> World:
         diseases=diseases,
         guides=FakeClinical(diseases),
         protocols=FakeClinical(diseases),
-        news=FakeNews(),
+        publications=FakePublications(),
+        previewer=FakePreviewer(),
         documents=FakeDocuments(),
         storage=FakeStorage(tmp_path),
     )
@@ -77,7 +77,8 @@ def world(tmp_path) -> World:
             get_disease_repository: lambda: w.diseases,
             GUIDE_REPOSITORY: lambda: w.guides,
             PROTOCOL_REPOSITORY: lambda: w.protocols,
-            get_news_repository: lambda: w.news,
+            get_publication_repository: lambda: w.publications,
+            get_link_previewer: lambda: w.previewer,
             get_document_repository: lambda: w.documents,
             get_file_storage: lambda: w.storage,
             get_max_upload_bytes: lambda: MAX_UPLOAD,

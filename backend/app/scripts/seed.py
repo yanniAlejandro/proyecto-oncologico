@@ -7,7 +7,6 @@ from sqlalchemy import select
 from app.features.contact.infrastructure.orm import ContactInfoRow as ContactInfo
 from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
 from app.features.interest_links.infrastructure.orm import InterestLinkRow as InterestLink
-from app.features.news.infrastructure.orm import NewsRow as News
 from app.features.users.infrastructure.orm import UserPermissionRow as UserPermission
 from app.features.users.infrastructure.orm import UserRow as User
 from app.shared.domain.actor import Role as UserRole
@@ -98,17 +97,6 @@ async def seed():
                         sort_order=2,
                     ),
                 ]
-            )
-
-        news_count = await db.execute(select(News))
-        if not news_count.scalars().first():
-            db.add(
-                News(
-                    title="Bienvenidos al Portal del Hospital Oncológico de La Habana",
-                    summary="Plataforma institucional de recursos clínicos para profesionales de la salud.",
-                    content="Este portal centraliza noticias, guías de diagnóstico, protocolos de tratamiento y documentación de referencia del Hospital Oncológico de La Habana.",
-                    is_published=True,
-                )
             )
 
         await db.commit()

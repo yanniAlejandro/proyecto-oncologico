@@ -23,13 +23,12 @@ def test_login_and_me(world: World):
 # Matriz de permisos: (método, ruta, cuerpo) → estado esperado por rol.
 ROLES = [None, "medico", "editor", "admin"]
 MATRIX = [
-    ("GET", "/api/v1/news", None, [200, 200, 200, 200]),
-    ("GET", "/api/v1/news/manage", None, [401, 403, 200, 200]),
+    ("GET", "/api/v1/publications", None, [200, 200, 200, 200]),
+    ("POST", "/api/v1/publications/preview", {"url": "https://desconocida.cu"}, [401, 403, 200, 200]),
     ("GET", "/api/v1/diagnostic-guides", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/treatment-protocols", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/documents", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/users", None, [401, 403, 403, 200]),
-    ("POST", "/api/v1/news", {"title": "Título", "content": "contenido suficiente"}, [401, 403, 201, 201]),
     ("POST", "/api/v1/diseases", {"name": "Linfoma"}, [401, 403, 201, 409]),
     ("PUT", "/api/v1/contact", {"phone": "1"}, [401, 403, 403, 200]),
     ("DELETE", "/api/v1/documents/00000000-0000-0000-0000-000000000000", None, [401, 403, 404, 404]),
@@ -180,3 +179,45 @@ def test_admin_cannot_lock_themselves_out(world: World):
     me = c.get("/api/v1/auth/me", headers=h).json()
     assert c.delete(f"/api/v1/users/{me['id']}", headers=h).status_code == 400
     assert c.patch(f"/api/v1/users/{me['id']}", json={"role": "medico"}, headers=h).status_code == 400
+
+
+def test_publication_flow_with_preview_and_stored_image(world: World):
+    from app.features.publications.domain.model import LinkPreview
+    from tests.fakes import PNG
+
+    url, image = "https://who.int/nota", "https://who.int/portada.png"
+    world.previewer.pages[url] = LinkPreview(url=url, title="Nota OMS", description="Resumen", image_url=image)
+    world.previewer.images[image] = PNG
+    c, h = world.client, world.as_("editor")
+
+    preview = c.post("/api/v1/publications/preview", json={"url": url}, headers=h).json()
+    assert preview == {
+        "found": True,
+        "title": "Nota OMS",
+        "description": "Resumen",
+        "image_url": image,
+        "site_name": None,
+    }
+    r = c.post(
+        "/api/v1/publications",
+        data={"title": preview["title"], "url": url, "description": preview["description"], "image_url": image},
+        headers=h,
+    )
+    assert r.status_code == 201
+    pub = r.json()
+    assert pub["domain"] == "who.int" and pub["image_url"].startswith(f"/api/v1/publications/{pub['id']}/image")
+    img = c.get(pub["image_url"])
+    assert img.status_code == 200 and img.content == PNG and img.headers["content-type"] == "image/png"
+
+    manual = c.put(
+        f"/api/v1/publications/{pub['id']}",
+        data={"title": "Nota OMS (editada)"},
+        files={"image": ("foto.png", PNG, "image/png")},
+        headers=h,
+    )
+    assert manual.status_code == 200 and manual.json()["title"] == "Nota OMS (editada)"
+    bad = c.put(f"/api/v1/publications/{pub['id']}", files={"image": ("x.png", b"<svg/>", "image/png")}, headers=h)
+    assert bad.status_code == 400
+    assert c.delete(f"/api/v1/publications/{pub['id']}", headers=world.as_("medico")).status_code == 403
+    assert c.delete(f"/api/v1/publications/{pub['id']}", headers=h).status_code == 204
+    assert world.storage.files == {}

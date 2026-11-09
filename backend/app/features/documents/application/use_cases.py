@@ -6,12 +6,12 @@ from app.features.documents.domain.model import (
     Disposition,
     Document,
     DocumentRepository,
-    FileStorage,
     FileToServe,
     NewDocument,
 )
 from app.shared.domain.actor import Actor, Section, require_section
 from app.shared.domain.result import AppError, Err, Ok, Result
+from app.shared.domain.storage import FileStorage
 
 NOT_FOUND = "Documento no encontrado"
 

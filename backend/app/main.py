@@ -7,7 +7,7 @@ from app.features.contact.presentation.router import router as contact_router
 from app.features.diseases.presentation.router import router as diseases_router
 from app.features.documents.presentation.router import router as documents_router
 from app.features.interest_links.presentation.router import router as links_router
-from app.features.news.presentation.router import router as news_router
+from app.features.publications.presentation.router import router as publications_router
 from app.features.users.presentation.router import router as users_router
 from app.shared.infrastructure import orm_registry  # noqa: F401  (registra todos los mapeos ORM)
 from app.shared.infrastructure.config import settings
@@ -17,7 +17,7 @@ def build_api_router() -> APIRouter:
     api = APIRouter()
     api.include_router(auth_router, prefix="/auth", tags=["auth"])
     api.include_router(users_router, prefix="/users", tags=["users"])
-    api.include_router(news_router, prefix="/news", tags=["news"])
+    api.include_router(publications_router, prefix="/publications", tags=["publications"])
     api.include_router(diseases_router, prefix="/diseases", tags=["diseases"])
     api.include_router(guides_router, prefix="/diagnostic-guides", tags=["diagnostic-guides"])
     api.include_router(protocols_router, prefix="/treatment-protocols", tags=["treatment-protocols"])

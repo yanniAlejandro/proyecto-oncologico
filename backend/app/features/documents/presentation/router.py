@@ -10,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.auth.presentation.deps import CurrentActor
 from app.features.documents.application import use_cases as uc
 from app.features.documents.domain.file_policy import ALLOWED_EXTENSIONS
-from app.features.documents.domain.model import Disposition, Document, DocumentRepository, FileStorage
-from app.features.documents.infrastructure.local_storage import LocalFileStorage
+from app.features.documents.domain.model import Disposition, Document, DocumentRepository
 from app.features.documents.infrastructure.repository import SqlDocumentRepository
 from app.shared.domain.result import AppError
 from app.shared.infrastructure.config import settings
 from app.shared.infrastructure.database import get_session
 from app.shared.presentation.errors import raise_http, unwrap
+from app.shared.presentation.storage import Storage, get_file_storage  # noqa: F401 (re-export)
 
 router = APIRouter()
 
@@ -25,16 +25,11 @@ def get_document_repository(session: Annotated[AsyncSession, Depends(get_session
     return SqlDocumentRepository(session)
 
 
-def get_file_storage() -> FileStorage:
-    return LocalFileStorage(settings.STORAGE_DIR)
-
-
 def get_max_upload_bytes() -> int:
     return settings.max_upload_bytes
 
 
 Repo = Annotated[DocumentRepository, Depends(get_document_repository)]
-Storage = Annotated[FileStorage, Depends(get_file_storage)]
 MaxBytes = Annotated[int, Depends(get_max_upload_bytes)]
 
 

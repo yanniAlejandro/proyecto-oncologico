@@ -25,12 +25,12 @@ describe("permisos (espejo del backend)", () => {
   });
 
   it("protege las rutas de gestión en el servidor", () => {
-    expect(isRouteAllowed("/gestion/noticias", editor)).toBe(true);
-    expect(isRouteAllowed("/gestion/noticias", doctor)).toBe(false);
-    expect(isRouteAllowed("/gestion/noticias/", null)).toBe(false);
+    expect(isRouteAllowed("/gestion/publicaciones", editor)).toBe(true);
+    expect(isRouteAllowed("/gestion/publicaciones", doctor)).toBe(false);
+    expect(isRouteAllowed("/gestion/publicaciones/", null)).toBe(false);
     expect(isRouteAllowed("/gestion/usuarios", editor)).toBe(false);
     expect(isRouteAllowed("/gestion/usuarios", admin)).toBe(true);
-    expect(isRouteAllowed("/gestion/noticiasX", null)).toBe(true); // no es prefijo de ruta
+    expect(isRouteAllowed("/gestion/publicacionesX", null)).toBe(true); // no es prefijo de ruta
     expect(isRouteAllowed("/documentos", null)).toBe(true);
   });
 });

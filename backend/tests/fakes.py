@@ -10,7 +10,7 @@ from app.features.contact.domain.model import DEFAULT_ORGANIZATION, ContactInfo
 from app.features.diseases.domain.model import Disease
 from app.features.documents.domain.model import Document, NewDocument
 from app.features.interest_links.domain.model import InterestLink
-from app.features.news.domain.model import News, NewsDraft
+from app.features.publications.domain.model import LinkPreview, NewPublication, Publication
 from app.features.users.domain.model import NewUser, User, UserChanges
 from app.shared.domain.actor import ALL_SECTIONS, Actor, Role
 
@@ -133,42 +133,66 @@ class FakeDiseases:
         return d
 
 
-class FakeNews:
+class FakePublications:
     def __init__(self) -> None:
-        self.rows: dict[UUID, News] = {}
+        self.rows: dict[UUID, Publication] = {}
+        self._tick = 0
 
-    async def list(self, *, published_only: bool, search: str | None) -> list[News]:
-        items = [n for n in self.rows.values() if n.is_published or not published_only]
+    def _now(self) -> datetime:
+        self._tick += 1
+        return now().replace(second=self._tick % 60)
+
+    async def list(self, search: str | None) -> list[Publication]:
+        items = sorted(self.rows.values(), key=lambda p: p.created_at, reverse=True)
         if search:
-            items = [n for n in items if search.lower() in f"{n.title} {n.summary or ''} {n.content}".lower()]
-        return sorted(items, key=lambda n: n.created_at, reverse=True)
+            items = [p for p in items if search.lower() in f"{p.title} {p.description or ''} {p.url}".lower()]
+        return items
 
-    async def get(self, news_id: UUID, *, published_only: bool) -> News | None:
-        n = self.rows.get(news_id)
-        return n if n and (n.is_published or not published_only) else None
+    async def get(self, publication_id: UUID) -> Publication | None:
+        return self.rows.get(publication_id)
 
-    async def add(self, draft: NewsDraft, author_id: UUID) -> News:
-        n = News(
+    async def add(self, new: NewPublication) -> Publication:
+        ts = self._now()
+        p = Publication(
             id=uuid4(),
-            title=draft.title,
-            summary=draft.summary,
-            content=draft.content,
-            is_published=draft.is_published,
-            created_at=now(),
-            updated_at=now(),
-            author_name=str(author_id),
+            title=new.title,
+            url=new.url,
+            description=new.description,
+            image_key=new.image_key,
+            created_at=ts,
+            updated_at=ts,
+            author_name=str(new.author_id),
         )
-        self.rows[n.id] = n
-        return n
+        self.rows[p.id] = p
+        return p
 
-    async def update(self, news_id: UUID, changes: dict[str, object]) -> News | None:
-        if news_id not in self.rows:
+    async def update(self, publication_id: UUID, changes: dict[str, object]) -> Publication | None:
+        if publication_id not in self.rows:
             return None
-        self.rows[news_id] = replace(self.rows[news_id], **changes)
-        return self.rows[news_id]
+        self.rows[publication_id] = replace(self.rows[publication_id], **changes, updated_at=self._now())
+        return self.rows[publication_id]
 
-    async def delete(self, news_id: UUID) -> bool:
-        return self.rows.pop(news_id, None) is not None
+    async def delete(self, publication_id: UUID) -> bool:
+        return self.rows.pop(publication_id, None) is not None
+
+
+PNG = b"\x89PNG\r\n\x1a\n" + b"\x00" * 32
+
+
+class FakePreviewer:
+    """Internet simulado: URL → vista previa, URL de imagen → bytes."""
+
+    def __init__(self, pages: dict[str, LinkPreview] | None = None, images: dict[str, bytes] | None = None) -> None:
+        self.pages = pages or {}
+        self.images = images or {}
+        self.fetched: list[str] = []
+
+    async def preview(self, url: str) -> LinkPreview | None:
+        return self.pages.get(url)
+
+    async def fetch_image(self, url: str) -> bytes | None:
+        self.fetched.append(url)
+        return self.images.get(url)
 
 
 class FakeClinical:

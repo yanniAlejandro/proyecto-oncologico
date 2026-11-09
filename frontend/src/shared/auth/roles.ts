@@ -37,7 +37,7 @@ export const canUsePanel = (user: MaybeUser) => isAdmin(user) || (user?.permissi
 
 /** Rutas protegidas: quién puede entrar. Lo aplica src/middleware.ts en el servidor. */
 export const PROTECTED_ROUTES: { prefix: string; allowed: (user: MaybeUser) => boolean }[] = [
-  { prefix: "/gestion/noticias", allowed: (u) => can(u, "publicaciones") },
+  { prefix: "/gestion/publicaciones", allowed: (u) => can(u, "publicaciones") },
   { prefix: "/gestion/usuarios", allowed: isAdmin },
 ];
 

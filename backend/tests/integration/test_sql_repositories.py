@@ -7,8 +7,8 @@ from app.features.clinical_content.infrastructure.repository import SqlClinicalC
 from app.features.diseases.infrastructure.repository import SqlDiseaseRepository
 from app.features.documents.domain.model import NewDocument
 from app.features.documents.infrastructure.repository import SqlDocumentRepository
-from app.features.news.domain.model import NewsDraft
-from app.features.news.infrastructure.repository import SqlNewsRepository
+from app.features.publications.domain.model import NewPublication
+from app.features.publications.infrastructure.repository import SqlPublicationRepository
 from app.features.users.domain.model import NewUser, UserChanges
 from app.features.users.infrastructure.repository import SqlUserRepository
 from app.shared.domain.actor import Role, Section
@@ -50,17 +50,19 @@ async def test_user_permissions_are_replaced_and_admins_counted(session):
     assert await repo.count_active_admins() == 1
 
 
-async def test_news_published_filter_search_and_author_name(session):
-    repo, user = SqlNewsRepository(session), await author(session)
-    pub = await repo.add(NewsDraft("Jornada científica", "contenido de la jornada"), user.id)
-    await repo.add(NewsDraft("Borrador", "texto interno", is_published=False), user.id)
-    assert [n.id for n in await repo.list(published_only=True, search=None)] == [pub.id]
-    assert len(await repo.list(published_only=False, search=None)) == 2
-    assert [n.title for n in await repo.list(published_only=True, search="JORNADA")] == ["Jornada científica"]
-    assert pub.author_name == "Encargada"
-    updated = await repo.update(pub.id, {"title": "Jornada 2026"})
-    assert updated.title == "Jornada 2026" and updated.updated_at >= pub.updated_at
-    assert await repo.delete(pub.id) and not await repo.delete(pub.id)
+async def test_publications_search_update_image_key_and_author(session):
+    repo, user = SqlPublicationRepository(session), await author(session)
+    old = await repo.add(NewPublication("Jornada científica", "https://holh.sld.cu/jornada", None, user.id))
+    new = await repo.add(
+        NewPublication("Guía OMS", "https://who.int/guia", "Recomendaciones", user.id, image_key="a" * 32 + ".png")
+    )
+    assert {p.id for p in await repo.list(None)} == {new.id, old.id}
+    assert [p.title for p in await repo.list("JORNADA")] == ["Jornada científica"]
+    assert [p.title for p in await repo.list("who.int")] == ["Guía OMS"]
+    assert new.author_name == "Encargada" and new.has_image and new.domain == "who.int"
+    updated = await repo.update(new.id, {"title": "Guía OMS 2026", "image_key": None})
+    assert updated.title == "Guía OMS 2026" and not updated.has_image
+    assert await repo.delete(old.id) and not await repo.delete(old.id)
 
 
 @pytest.mark.parametrize("kind", list(ContentKind))
