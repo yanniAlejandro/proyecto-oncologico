@@ -3,10 +3,10 @@ from uuid import uuid4
 import pytest
 
 from app.features.publications.application import use_cases as uc
-from app.features.publications.domain.image_policy import sniff_image, validate_image
 from app.features.publications.domain.model import LinkPreview
 from app.features.publications.domain.open_graph import parse_open_graph
 from app.shared.domain.actor import Actor, Role, Section
+from app.shared.domain.image_policy import sniff_image, validate_image
 from app.shared.domain.result import ErrorKind
 from tests.fakes import ADMIN, DOCTOR, EDITOR, PNG, FakePreviewer, FakePublications, FakeStorage
 from tests.helpers import err, ok

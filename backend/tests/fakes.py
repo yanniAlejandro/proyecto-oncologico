@@ -5,6 +5,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import UUID, uuid4
 
+from app.features.about.domain.model import AboutSection, NewAboutSection
 from app.features.clinical_content.domain.model import ClinicalDoc, ClinicalDraft
 from app.features.contact.domain.model import DEFAULT_ORGANIZATION, ContactInfo
 from app.features.diseases.domain.model import Disease
@@ -193,6 +194,42 @@ class FakePreviewer:
     async def fetch_image(self, url: str) -> bytes | None:
         self.fetched.append(url)
         return self.images.get(url)
+
+
+class FakeAbout:
+    def __init__(self) -> None:
+        self.rows: dict[UUID, AboutSection] = {}
+
+    async def list(self) -> list[AboutSection]:
+        return sorted(self.rows.values(), key=lambda s: (s.sort_order, s.title))
+
+    async def get(self, section_id: UUID) -> AboutSection | None:
+        return self.rows.get(section_id)
+
+    async def slug_exists(self, slug: str, exclude: UUID | None = None) -> bool:
+        return any(s.slug == slug and s.id != exclude for s in self.rows.values())
+
+    async def add(self, new: NewAboutSection) -> AboutSection:
+        s = AboutSection(
+            id=uuid4(),
+            updated_at=now(),
+            slug=new.slug,
+            title=new.title,
+            body=new.body,
+            sort_order=new.sort_order,
+            image_key=new.image_key,
+        )
+        self.rows[s.id] = s
+        return s
+
+    async def update(self, section_id: UUID, changes: dict[str, object]) -> AboutSection | None:
+        if section_id not in self.rows:
+            return None
+        self.rows[section_id] = replace(self.rows[section_id], **changes)
+        return self.rows[section_id]
+
+    async def delete(self, section_id: UUID) -> bool:
+        return self.rows.pop(section_id, None) is not None
 
 
 class FakeClinical:

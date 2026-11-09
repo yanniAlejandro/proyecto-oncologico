@@ -1,4 +1,4 @@
-"""Imágenes aceptadas: se identifican por su contenido (magic bytes), nunca por la extensión."""
+"""Imágenes aceptadas (publicaciones, «Quiénes somos»): se identifican por su contenido, nunca por la extensión."""
 
 from app.shared.domain.result import AppError, Err, Ok, Result
 

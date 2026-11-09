@@ -9,10 +9,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.auth.presentation.deps import CurrentActor
 from app.features.publications.application import use_cases as uc
-from app.features.publications.domain.image_policy import MAX_IMAGE_BYTES
 from app.features.publications.domain.model import LinkPreviewer, Publication, PublicationRepository
 from app.features.publications.infrastructure.http_previewer import HttpLinkPreviewer
 from app.features.publications.infrastructure.repository import SqlPublicationRepository
+from app.shared.domain.image_policy import MAX_IMAGE_BYTES
 from app.shared.infrastructure.database import get_session
 from app.shared.presentation.errors import unwrap
 from app.shared.presentation.storage import Storage

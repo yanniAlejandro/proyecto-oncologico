@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from app.features.publications.domain.image_policy import MEDIA_TYPES, validate_image
 from app.features.publications.domain.model import (
     EDITABLE_FIELDS,
     LinkPreview,
@@ -15,6 +14,7 @@ from app.features.publications.domain.model import (
     is_valid_url,
 )
 from app.shared.domain.actor import Actor, Section, require_section
+from app.shared.domain.image_policy import MEDIA_TYPES, validate_image
 from app.shared.domain.result import AppError, Err, Ok, Result
 from app.shared.domain.storage import FileStorage
 

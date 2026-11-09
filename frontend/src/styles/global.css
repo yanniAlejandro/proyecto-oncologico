@@ -624,6 +624,129 @@
     flex-shrink: 0;
   }
 
+  /* Quiénes somos */
+  .about-index {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+  }
+
+  .about-index a {
+    padding: 0.45rem 0.9rem;
+    border: 1px solid var(--holh-border);
+    border-radius: 999px;
+    background: var(--holh-white);
+    color: var(--holh-blue);
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition:
+      border-color 0.2s,
+      background 0.2s;
+  }
+
+  .about-index a:hover {
+    border-color: var(--holh-teal);
+    background: #eef6f7;
+  }
+
+  .about-sections {
+    display: grid;
+    gap: 1.5rem;
+  }
+
+  .about-section {
+    display: grid;
+    gap: 1.5rem;
+    background: var(--holh-white);
+    border: 1px solid var(--holh-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    padding: 1.75rem;
+    scroll-margin-top: 1.5rem;
+  }
+
+  .about-section.has-image {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+    align-items: start;
+  }
+
+  .about-section h2 {
+    color: var(--holh-blue);
+    font-size: 1.35rem;
+    font-weight: 700;
+    margin-bottom: 0.9rem;
+  }
+
+  .about-section-image {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    object-fit: cover;
+    aspect-ratio: 4 / 3;
+  }
+
+  @media (max-width: 768px) {
+    .about-section,
+    .about-section.has-image {
+      grid-template-columns: 1fr;
+      padding: 1.25rem;
+    }
+  }
+
+  .rich-text {
+    color: var(--holh-text);
+    font-size: 0.97rem;
+    line-height: 1.65;
+  }
+
+  .rich-text p,
+  .rich-text ul {
+    margin: 0 0 0.85rem;
+  }
+
+  .rich-text ul {
+    padding-left: 1.25rem;
+    list-style: disc;
+  }
+
+  .rich-text li {
+    margin-bottom: 0.3rem;
+  }
+
+  .rich-text li::marker {
+    color: var(--holh-teal);
+  }
+
+  .rich-text h3 {
+    color: var(--holh-blue);
+    font-size: 1.05rem;
+    font-weight: 700;
+    margin: 1.2rem 0 0.5rem;
+  }
+
+  .rich-text strong {
+    font-weight: 700;
+  }
+
+  .rich-text .rich-note {
+    padding: 0.6rem 0.85rem;
+    border-left: 3px solid #d9a400;
+    background: #fff8e1;
+    border-radius: 4px;
+    font-size: 0.88rem;
+    color: #6b5300;
+  }
+
+  .rich-text-preview {
+    max-height: 22rem;
+    overflow-y: auto;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--holh-border);
+    border-radius: var(--radius-lg);
+    background: #fbfcfd;
+  }
+
   /* Search */
   .search-bar {
     margin-bottom: 1.25rem;

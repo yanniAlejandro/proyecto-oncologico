@@ -1,5 +1,6 @@
 """Importa todos los modelos ORM para que ``Base.metadata`` esté completo (Alembic, seeds)."""
 
+from app.features.about.infrastructure.orm import AboutSectionRow
 from app.features.clinical_content.infrastructure.orm import DiagnosticGuideRow, TreatmentProtocolRow
 from app.features.contact.infrastructure.orm import ContactInfoRow
 from app.features.diseases.infrastructure.orm import DiseaseRow
@@ -20,4 +21,5 @@ __all__ = [
     "DocumentRow",
     "InterestLinkRow",
     "ContactInfoRow",
+    "AboutSectionRow",
 ]

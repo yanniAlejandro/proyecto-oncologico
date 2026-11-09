@@ -24,6 +24,7 @@ def test_login_and_me(world: World):
 ROLES = [None, "medico", "editor", "admin"]
 MATRIX = [
     ("GET", "/api/v1/publications", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/about", None, [200, 200, 200, 200]),
     ("POST", "/api/v1/publications/preview", {"url": "https://desconocida.cu"}, [401, 403, 200, 200]),
     ("GET", "/api/v1/diagnostic-guides", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/treatment-protocols", None, [401, 200, 200, 200]),
@@ -221,3 +222,24 @@ def test_publication_flow_with_preview_and_stored_image(world: World):
     assert c.delete(f"/api/v1/publications/{pub['id']}", headers=world.as_("medico")).status_code == 403
     assert c.delete(f"/api/v1/publications/{pub['id']}", headers=h).status_code == 204
     assert world.storage.files == {}
+
+
+def test_about_section_crud_over_http(world: World):
+    from tests.fakes import PNG
+
+    c, h = world.client, world.as_("editor")
+    r = c.post(
+        "/api/v1/about",
+        data={"title": "Oncología pediátrica", "body": "- Acompañamiento 24 h"},
+        files={"image": ("sala.png", PNG, "image/png")},
+        headers=h,
+    )
+    assert r.status_code == 201
+    section = r.json()
+    assert section["slug"] == "oncologia-pediatrica" and section["image_url"]
+    assert c.get(section["image_url"]).content == PNG
+    assert [s["title"] for s in c.get("/api/v1/about").json()] == ["Oncología pediátrica"]
+    upd = c.put(f"/api/v1/about/{section['id']}", data={"remove_image": "true", "body": "Nuevo texto"}, headers=h)
+    assert upd.status_code == 200 and upd.json()["image_url"] is None and upd.json()["body"] == "Nuevo texto"
+    assert c.delete(f"/api/v1/about/{section['id']}", headers=world.as_("medico")).status_code == 403
+    assert c.delete(f"/api/v1/about/{section['id']}", headers=h).status_code == 204

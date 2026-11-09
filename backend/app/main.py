@@ -1,6 +1,7 @@
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.features.about.presentation.router import router as about_router
 from app.features.auth.presentation.router import router as auth_router
 from app.features.clinical_content.presentation.router import guides_router, protocols_router
 from app.features.contact.presentation.router import router as contact_router
@@ -24,6 +25,7 @@ def build_api_router() -> APIRouter:
     api.include_router(documents_router, prefix="/documents", tags=["documents"])
     api.include_router(links_router, prefix="/interest-links", tags=["interest-links"])
     api.include_router(contact_router, prefix="/contact", tags=["contact"])
+    api.include_router(about_router, prefix="/about", tags=["about"])
     return api
 
 

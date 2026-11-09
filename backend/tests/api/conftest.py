@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import pytest
 from fastapi.testclient import TestClient
 
+from app.features.about.presentation.router import get_about_repository
 from app.features.auth.presentation.deps import get_token_service
 from app.features.clinical_content.presentation.router import GUIDE_REPOSITORY, PROTOCOL_REPOSITORY
 from app.features.contact.presentation.router import get_contact_repository
@@ -19,6 +20,7 @@ from tests.fakes import (
     ADMIN,
     DOCTOR,
     EDITOR,
+    FakeAbout,
     FakeClinical,
     FakeContact,
     FakeDiseases,
@@ -68,7 +70,7 @@ def world(tmp_path) -> World:
         documents=FakeDocuments(),
         storage=FakeStorage(tmp_path),
     )
-    links, contact = FakeLinks(), FakeContact()
+    links, contact, about = FakeLinks(), FakeContact(), FakeAbout()
     app.dependency_overrides.update(
         {
             get_user_repository: lambda: w.users,
@@ -84,6 +86,7 @@ def world(tmp_path) -> World:
             get_max_upload_bytes: lambda: MAX_UPLOAD,
             get_link_repository: lambda: links,
             get_contact_repository: lambda: contact,
+            get_about_repository: lambda: about,
         }
     )
     return w

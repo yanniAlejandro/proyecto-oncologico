@@ -19,7 +19,7 @@ const path = Astro.url.pathname;
 const pageTitle = title ? `${title} · Hospital Oncológico de La Habana` : "Hospital Oncológico de La Habana";
 
 const navItems = [
-  { href: "/", label: "Inicio" },
+  { href: "/", label: "Quiénes somos" },
   { href: "/publicaciones", label: "Publicaciones" },
   { href: "/guias-diagnostico", label: "Guías de Diagnóstico" },
   { href: "/protocolos-tratamiento", label: "Protocolos" },
@@ -29,6 +29,7 @@ const navItems = [
 ];
 const adminItems = [
   ...(can(user, "publicaciones") ? [{ href: "/gestion/publicaciones", label: "Gestión Publicaciones" }] : []),
+  ...(can(user, "quienes_somos") ? [{ href: "/gestion/quienes-somos", label: "Gestión Quiénes somos" }] : []),
   ...(isAdmin(user) ? [{ href: "/gestion/usuarios", label: "Gestión Usuarios" }] : []),
 ];
 const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));

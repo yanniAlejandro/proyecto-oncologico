@@ -4,11 +4,14 @@ import asyncio
 
 from sqlalchemy import select
 
+from app.features.about.domain.model import slugify
+from app.features.about.infrastructure.orm import AboutSectionRow as AboutSection
 from app.features.contact.infrastructure.orm import ContactInfoRow as ContactInfo
 from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
 from app.features.interest_links.infrastructure.orm import InterestLinkRow as InterestLink
 from app.features.users.infrastructure.orm import UserPermissionRow as UserPermission
 from app.features.users.infrastructure.orm import UserRow as User
+from app.scripts.about_drafts import DRAFTS
 from app.shared.domain.actor import Role as UserRole
 from app.shared.domain.actor import Section
 from app.shared.infrastructure import orm_registry  # noqa: F401
@@ -98,6 +101,11 @@ async def seed():
                     ),
                 ]
             )
+
+        about = await db.execute(select(AboutSection).limit(1))
+        if about.scalar_one_or_none() is None:
+            for order, (title, body) in enumerate(DRAFTS, start=1):
+                db.add(AboutSection(slug=slugify(title), title=title, body=body, sort_order=order * 10))
 
         await db.commit()
         print("Seed completado.")

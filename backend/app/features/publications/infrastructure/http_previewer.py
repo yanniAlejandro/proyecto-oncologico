@@ -17,9 +17,9 @@ from urllib.parse import urljoin, urlparse
 
 import httpx
 
-from app.features.publications.domain.image_policy import MAX_IMAGE_BYTES
 from app.features.publications.domain.model import LinkPreview
 from app.features.publications.domain.open_graph import parse_open_graph
+from app.shared.domain.image_policy import MAX_IMAGE_BYTES
 
 MAX_HTML_BYTES = 2 * 1024 * 1024
 MAX_REDIRECTS = 3
