@@ -174,7 +174,7 @@ function Manager({ initialItems, currentUserId, api: injected }: Props) {
               ) : (
                 <div className="permission-chips">
                   {user.permissions.map((p) => (
-                    <Badge key={p} className="text-[0.72rem]">
+                    <Badge key={p} className="text-[0.75rem]">
                       {SECTION_LABELS[p]}
                     </Badge>
                   ))}

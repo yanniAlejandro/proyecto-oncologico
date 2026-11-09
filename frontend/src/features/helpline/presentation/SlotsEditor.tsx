@@ -21,7 +21,7 @@ export function SlotsEditor({ slots, onChange, label }: Props) {
       <legend className="mb-1 text-[0.88rem] font-semibold text-holh-text">{label}</legend>
       {slots.length === 0 && <p className="m-0 text-[0.85rem] text-holh-muted">Sin franjas: aparecerá «Fuera de horario».</p>}
       {slots.map((slot, i) => (
-        <div key={i} className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,1fr)_auto] items-center gap-2">
+        <div key={i} className="slot-row">
           <NativeSelect
             aria-label={`Día de la franja ${i + 1}`}
             value={slot.weekday}

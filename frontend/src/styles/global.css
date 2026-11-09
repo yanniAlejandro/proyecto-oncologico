@@ -469,7 +469,7 @@
   /* Cards */
   .card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
     gap: 1.25rem;
   }
 
@@ -754,6 +754,23 @@
     text-decoration: none;
   }
 
+  .helpline-strip {
+    flex-wrap: wrap;
+    justify-content: center;
+    row-gap: 0.1rem;
+  }
+
+  @media (max-width: 768px) {
+    .helpline-strip {
+      padding: 0.2rem 0; /* objetivo táctil ≥ 24 px */
+    }
+  }
+
+  .helpline-strip > span,
+  .helpline-status {
+    white-space: nowrap;
+  }
+
   .helpline-strip strong {
     color: white;
     font-weight: 700;
@@ -784,6 +801,10 @@
 
   .helpline-status.is-closed {
     color: #9a5b00;
+  }
+
+  .institutional-bar .helpline-status {
+    font-size: 0.75rem;
   }
 
   .institutional-bar .helpline-status.is-open {
@@ -885,7 +906,8 @@
   }
 
   .helpline-pro-phone {
-    display: block;
+    display: inline-block;
+    padding: 0.2rem 0;
     margin-bottom: 0.4rem;
     color: var(--holh-teal);
     font-size: 1.15rem;
@@ -970,7 +992,7 @@
   .admin-nav-label {
     padding: 0 0.6rem 0.25rem;
     color: var(--holh-muted);
-    font-size: 0.72rem;
+    font-size: 0.75rem;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -1114,7 +1136,7 @@
 
   .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(190px, 100%), 1fr));
     gap: 1rem;
     margin-bottom: 2rem;
   }
@@ -1191,7 +1213,7 @@
 
   .permission-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
     gap: 0.4rem 1rem;
   }
 
@@ -1326,6 +1348,33 @@
     background: var(--holh-cream);
   }
 
+  /* Editor de franjas (línea de ayuda): en pantallas estrechas el día ocupa su propia fila. */
+  .slot-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  @media (max-width: 480px) {
+    .slot-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px dashed var(--holh-border);
+    }
+
+    .slot-row > select {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* Pantallas táctiles: objetivos de al menos 36 px de alto. */
+  @media (pointer: coarse) {
+    [data-slot="button"] {
+      min-height: 2.25rem;
+    }
+  }
+
   /* Search */
   .search-bar {
     margin-bottom: 1.25rem;
@@ -1387,6 +1436,12 @@
 
   .data-table tbody tr:last-child td {
     border-bottom: none;
+  }
+
+  .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    border-radius: var(--radius-lg);
   }
 
   /* Antes iba en el <td> (display:flex rompía la altura y el borde de la celda). */

@@ -177,7 +177,7 @@ function Manager({ initialConfig, initialProfessionals, api: injected }: Props) 
         </form>
       </section>
 
-      <div className="section-heading flex items-end justify-between gap-4">
+      <div className="section-heading flex flex-wrap items-end justify-between gap-4">
         <div>
           <h3>Profesionales</h3>
           <p>Contactos que pacientes y familias pueden llamar directamente</p>

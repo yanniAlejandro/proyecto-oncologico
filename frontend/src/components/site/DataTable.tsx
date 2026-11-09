@@ -8,35 +8,40 @@ interface DataTableProps {
   children: ReactNode;
 }
 
-/** Tabla del portal (.data-table) con caption accesible y aviso de scroll en móvil (BUG-002). */
+/**
+ * Tabla del portal (.data-table) con caption accesible. Va dentro de `.table-wrap` (scroll horizontal a
+ * cualquier ancho, p. ej. en el panel con la barra lateral) y avisa del scroll en móvil (BUG-002).
+ */
 export function DataTable({ columns, caption, isEmpty, emptyMessage, children }: DataTableProps) {
   return (
     <>
       <p className="table-scroll-hint" aria-hidden="true">
         Desliza la tabla horizontalmente para ver todas las columnas →
       </p>
-      <table className="data-table">
-        <caption className="sr-only">{caption}</caption>
-        <thead>
-          <tr>
-            {columns.map((c) => (
-              <th key={c} scope="col">
-                {c}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {children}
-          {isEmpty && (
+      <div className="table-wrap">
+        <table className="data-table">
+          <caption className="sr-only">{caption}</caption>
+          <thead>
             <tr>
-              <td colSpan={columns.length} className="muted">
-                {emptyMessage}
-              </td>
+              {columns.map((c) => (
+                <th key={c} scope="col">
+                  {c}
+                </th>
+              ))}
             </tr>
-          )}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {children}
+            {isEmpty && (
+              <tr>
+                <td colSpan={columns.length} className="muted">
+                  {emptyMessage}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
