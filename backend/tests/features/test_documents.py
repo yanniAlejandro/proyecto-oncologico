@@ -7,7 +7,7 @@ from app.features.documents.domain.file_policy import kind_for, sanitize_filenam
 from app.features.documents.domain.model import Disposition
 from app.features.documents.infrastructure.local_storage import LocalFileStorage
 from app.shared.domain.result import ErrorKind
-from tests.fakes import ADMIN, DOCTOR, MANAGER, FakeDocuments, FakeStorage
+from tests.fakes import ADMIN, DOCTOR, EDITOR, FakeDocuments, FakeStorage
 from tests.helpers import err, ok
 
 PDF = b"%PDF-1.4\n contenido"
@@ -75,7 +75,7 @@ def storage(tmp_path):
     return FakeStorage(tmp_path)
 
 
-def upload(repo, storage, actor=MANAGER, filename="informe.pdf", data=PDF, max_bytes=MB):
+def upload(repo, storage, actor=EDITOR, filename="informe.pdf", data=PDF, max_bytes=MB):
     return uc.UploadDocument(repo, storage, max_bytes)(
         actor, title=" Informe ", description="  ", filename=filename, data=data
     )

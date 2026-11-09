@@ -1,36 +1,56 @@
 import pytest
 from fastapi import HTTPException
 
-from app.shared.domain.actor import ADMINS, CONTENT_MANAGERS, GUIDE_READERS, Role, can_manage_content, require
+from app.shared.domain.actor import (
+    ALL_SECTIONS,
+    Actor,
+    Role,
+    Section,
+    normalize_permissions,
+    require_admin,
+    require_section,
+    require_user,
+)
 from app.shared.domain.result import AppError, Err, ErrorKind, Ok
 from app.shared.presentation.errors import unwrap
-from tests.fakes import ADMIN, DOCTOR, MANAGER
+from tests.fakes import ADMIN, DOCTOR, EDITOR
 from tests.helpers import err, ok
 
 
-def test_require_returns_401_for_visitor_and_403_for_wrong_role():
-    err(require(None, ADMINS), ErrorKind.UNAUTHENTICATED)
-    err(require(DOCTOR, CONTENT_MANAGERS), ErrorKind.FORBIDDEN)
-    assert ok(require(MANAGER, CONTENT_MANAGERS)) is MANAGER
+def test_require_section_401_visitor_403_without_permission():
+    err(require_section(None, Section.DOCUMENTOS), ErrorKind.UNAUTHENTICATED)
+    err(require_section(DOCTOR, Section.DOCUMENTOS), ErrorKind.FORBIDDEN)
+    assert ok(require_section(EDITOR, Section.DOCUMENTOS)) is EDITOR
+    assert ok(require_section(ADMIN, Section.DOCUMENTOS)) is ADMIN
 
 
-@pytest.mark.parametrize(
-    ("role", "manage", "read_guides", "admin"),
-    [
-        (Role.ADMINISTRADOR, True, True, True),
-        (Role.ENCARGADO, True, True, False),
-        (Role.MEDICO, False, True, False),
-    ],
-)
-def test_role_matrix(role, manage, read_guides, admin):
-    assert (role in CONTENT_MANAGERS) is manage
-    assert (role in GUIDE_READERS) is read_guides
-    assert (role in ADMINS) is admin
+def test_doctor_permissions_are_per_section():
+    doc = Actor(id=DOCTOR.id, role=Role.MEDICO, permissions=frozenset({Section.PUBLICACIONES}))
+    assert doc.can(Section.PUBLICACIONES)
+    assert not doc.can(Section.GUIAS)
+    err(require_section(doc, Section.GUIAS), ErrorKind.FORBIDDEN)
 
 
-def test_can_manage_content():
-    assert can_manage_content(ADMIN) and can_manage_content(MANAGER)
-    assert not can_manage_content(DOCTOR) and not can_manage_content(None)
+def test_admin_has_every_section_implicitly():
+    assert ADMIN.permissions == frozenset()
+    assert ADMIN.effective_permissions == ALL_SECTIONS
+    assert DOCTOR.effective_permissions == frozenset()
+
+
+def test_require_user_and_admin():
+    err(require_user(None), ErrorKind.UNAUTHENTICATED)
+    assert ok(require_user(DOCTOR)) is DOCTOR
+    err(require_admin(EDITOR), ErrorKind.FORBIDDEN)
+    err(require_admin(None), ErrorKind.UNAUTHENTICATED)
+    assert ok(require_admin(ADMIN)) is ADMIN
+
+
+def test_normalize_permissions_drops_unknown_values():
+    assert normalize_permissions(["guias", "obsoleta", Section.ENLACES]) == {Section.GUIAS, Section.ENLACES}
+
+
+def test_encargado_role_no_longer_exists():
+    assert {r.value for r in Role} == {"administrador", "medico"}
 
 
 @pytest.mark.parametrize(

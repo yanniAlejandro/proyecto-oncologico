@@ -7,11 +7,11 @@ import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.a
 import { ClinicalDocsPage } from "@/features/clinical/presentation/ClinicalDocsPage";
 import { createDiseasesApi } from "@/features/diseases/infrastructure/diseases.api";
 import { load, serverTransport } from "@/shared/api/server";
-import { canManageContent, canReadGuides } from "@/shared/auth/roles";
+import { can, canReadClinical } from "@/shared/auth/roles";
 
 const { user, token } = Astro.locals;
-const canRead = canReadGuides(user);
-const canManage = canManageContent(user);
+const canRead = canReadClinical(user);
+const canManage = can(user, "guias");
 const t = serverTransport(token);
 const guides = canRead ? await load(() => createClinicalApi(t, "guide").list()) : null;
 const diseases = canManage ? await load(() => createDiseasesApi(t).list()) : null;
@@ -23,7 +23,7 @@ const diseases = canManage ? await load(() => createDiseasesApi(t).list()) : nul
       <>
         <PageHeader title="Guías de Diagnóstico" subtitle="Acceso restringido al personal autorizado" />
         <div class="access-notice">
-          <p>Debes iniciar sesión como médico, encargado o administrador del Hospital Oncológico de La Habana.</p>
+          <p>Debes iniciar sesión como médico o administrador del Hospital Oncológico de La Habana.</p>
           <LoginDialog client:load triggerLabel="Iniciar sesión" />
         </div>
       </>

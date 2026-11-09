@@ -8,8 +8,10 @@ from app.features.contact.infrastructure.orm import ContactInfoRow as ContactInf
 from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
 from app.features.interest_links.infrastructure.orm import InterestLinkRow as InterestLink
 from app.features.news.infrastructure.orm import NewsRow as News
+from app.features.users.infrastructure.orm import UserPermissionRow as UserPermission
 from app.features.users.infrastructure.orm import UserRow as User
 from app.shared.domain.actor import Role as UserRole
+from app.shared.domain.actor import Section
 from app.shared.infrastructure import orm_registry  # noqa: F401
 from app.shared.infrastructure.database import async_session
 from app.shared.infrastructure.security import BcryptPasswordHasher
@@ -30,16 +32,19 @@ async def seed():
                 )
             )
 
-        encargado = await db.execute(select(User).where(User.email == "encargado@oncologico.com"))
-        if encargado.scalar_one_or_none() is None:
-            db.add(
-                User(
-                    email="encargado@oncologico.com",
-                    password_hash=hash_password("Encargado123!"),
-                    full_name="Encargado Clínico",
-                    role=UserRole.ENCARGADO,
-                )
+        editora = await db.execute(select(User).where(User.email == "editora@oncologico.com"))
+        if editora.scalar_one_or_none() is None:
+            row = User(
+                email="editora@oncologico.com",
+                password_hash=hash_password("Editora123!"),
+                full_name="Dra. María González",
+                role=UserRole.MEDICO,
             )
+            # Médico con permisos de gestión concedidos (ejemplo del modelo de permisos).
+            row.permission_rows = [
+                UserPermission(section=s.value) for s in (Section.PUBLICACIONES, Section.DOCUMENTOS, Section.ENLACES)
+            ]
+            db.add(row)
 
         medico = await db.execute(select(User).where(User.email == "medico@oncologico.com"))
         if medico.scalar_one_or_none() is None:
@@ -109,7 +114,7 @@ async def seed():
         await db.commit()
         print("Seed completado.")
         print("Admin: admin@oncologico.com / Admin123!")
-        print("Encargado: encargado@oncologico.com / Encargado123!")
+        print("Médico con permisos: editora@oncologico.com / Editora123!")
         print("Médico: medico@oncologico.com / Medico123!")
 
 

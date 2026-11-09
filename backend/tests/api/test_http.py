@@ -21,17 +21,18 @@ def test_login_and_me(world: World):
 
 
 # Matriz de permisos: (método, ruta, cuerpo) → estado esperado por rol.
-ROLES = [None, "medico", "encargado", "admin"]
+ROLES = [None, "medico", "editor", "admin"]
 MATRIX = [
     ("GET", "/api/v1/news", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/news/manage", None, [401, 403, 200, 200]),
     ("GET", "/api/v1/diagnostic-guides", None, [401, 200, 200, 200]),
-    ("GET", "/api/v1/treatment-protocols", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/treatment-protocols", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/documents", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/users", None, [401, 403, 403, 200]),
     ("POST", "/api/v1/news", {"title": "Título", "content": "contenido suficiente"}, [401, 403, 201, 201]),
     ("POST", "/api/v1/diseases", {"name": "Linfoma"}, [401, 403, 201, 409]),
     ("PUT", "/api/v1/contact", {"phone": "1"}, [401, 403, 403, 200]),
+    ("DELETE", "/api/v1/documents/00000000-0000-0000-0000-000000000000", None, [401, 403, 404, 404]),
     ("POST", "/api/v1/interest-links", {"title": "x", "url": "https://x.cu"}, [401, 403, 201, 201]),
 ]
 
@@ -43,7 +44,7 @@ def test_role_matrix(world: World, method, path, body, expected):
 
 
 def test_guide_crud_and_validation(world: World):
-    c, h = world.client, world.as_("encargado")
+    c, h = world.client, world.as_("editor")
     disease_id = str(world.diseases.by_name("Leucemia").id)
     assert (
         c.post(
@@ -69,7 +70,7 @@ def test_guide_crud_and_validation(world: World):
 
 
 def test_document_upload_view_download_delete(world: World):
-    c, h = world.client, world.as_("encargado")
+    c, h = world.client, world.as_("editor")
     files = {"file": ("../Informe é.pdf", PDF, "application/pdf")}
     assert c.post("/api/v1/documents", data={"title": "Informe"}, files=files).status_code == 401
     assert (
@@ -125,7 +126,7 @@ def test_document_upload_rejections(world: World):
 
 
 def test_document_external_link_and_policy(world: World):
-    c, h = world.client, world.as_("encargado")
+    c, h = world.client, world.as_("editor")
     r = c.post("/api/v1/documents", data={"title": "Manual OMS", "file_url": "https://who.int/m.pdf"}, headers=h)
     assert r.status_code == 201 and r.json()["has_file"] is False and r.json()["file_url"]
     assert c.get(f"/api/v1/documents/{r.json()['id']}/file").status_code == 404
@@ -141,11 +142,41 @@ def test_admin_creates_and_deactivates_doctor(world: World):
     assert r.status_code == 201 and r.json()["role"] == "medico"
     dup = c.post("/api/v1/users", json={"email": "NUEVA@holh.cu", "password": "secreto1", "full_name": "Xx"}, headers=h)
     assert dup.status_code == 409
-    other_role = c.post(
+    unknown_role = c.post(
         "/api/v1/users",
         json={"email": "e@holh.cu", "password": "secreto1", "full_name": "Xx", "role": "encargado"},
         headers=h,
     )
-    assert other_role.status_code == 400
+    assert unknown_role.status_code == 422
     assert c.delete(f"/api/v1/users/{r.json()['id']}", headers=h).status_code == 204
     assert c.post("/api/v1/auth/login", json={"email": "nueva@holh.cu", "password": "secreto1"}).status_code == 401
+
+
+def test_permission_granted_over_http_takes_effect_immediately(world: World):
+    c, admin, doctor = world.client, world.as_("admin"), world.as_("medico")
+    link = {"title": "OMS", "url": "https://who.int"}
+    assert c.post("/api/v1/interest-links", json=link, headers=doctor).status_code == 403
+    me = c.get("/api/v1/auth/me", headers=doctor).json()
+    assert me["permissions"] == []
+
+    r = c.patch(f"/api/v1/users/{me['id']}", json={"permissions": ["enlaces"]}, headers=admin)
+    assert r.status_code == 200 and r.json()["permissions"] == ["enlaces"]
+    assert c.get("/api/v1/auth/me", headers=doctor).json()["permissions"] == ["enlaces"]
+    assert c.post("/api/v1/interest-links", json=link, headers=doctor).status_code == 201
+    assert c.post("/api/v1/diseases", json={"name": "Linfoma"}, headers=doctor).status_code == 403
+
+    bad = c.patch(f"/api/v1/users/{me['id']}", json={"permissions": ["inventada"]}, headers=admin)
+    assert bad.status_code == 422
+    assert c.patch(f"/api/v1/users/{me['id']}", json={"permissions": []}, headers=doctor).status_code == 403
+
+
+def test_admin_me_lists_every_section(world: World):
+    perms = world.client.get("/api/v1/auth/me", headers=world.as_("admin")).json()["permissions"]
+    assert "publicaciones" in perms and "linea_ayuda" in perms
+
+
+def test_admin_cannot_lock_themselves_out(world: World):
+    c, h = world.client, world.as_("admin")
+    me = c.get("/api/v1/auth/me", headers=h).json()
+    assert c.delete(f"/api/v1/users/{me['id']}", headers=h).status_code == 400
+    assert c.patch(f"/api/v1/users/{me['id']}", json={"role": "medico"}, headers=h).status_code == 400

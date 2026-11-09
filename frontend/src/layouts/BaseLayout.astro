@@ -6,7 +6,7 @@ import sans600 from "@fontsource/source-sans-3/files/source-sans-3-latin-600-nor
 import sans700 from "@fontsource/source-sans-3/files/source-sans-3-latin-700-normal.woff2?url";
 import { ClientRouter } from "astro:transitions";
 import { HospitalLogo } from "@/components/site/HospitalLogo";
-import { canManageContent, isAdmin } from "@/shared/auth/roles";
+import { can, isAdmin } from "@/shared/auth/roles";
 
 interface Props {
   title?: string;
@@ -27,7 +27,7 @@ const navItems = [
   { href: "/contacto", label: "Contacto" },
 ];
 const adminItems = [
-  ...(canManageContent(user) ? [{ href: "/gestion/noticias", label: "Gestión Noticias" }] : []),
+  ...(can(user, "publicaciones") ? [{ href: "/gestion/noticias", label: "Gestión Noticias" }] : []),
   ...(isAdmin(user) ? [{ href: "/gestion/usuarios", label: "Gestión Usuarios" }] : []),
 ];
 const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));

@@ -1,5 +1,5 @@
 from app.features.diseases.domain.model import Disease, DiseaseRepository
-from app.shared.domain.actor import CONTENT_MANAGERS, Actor, require
+from app.shared.domain.actor import Actor, Section, require_section
 from app.shared.domain.result import AppError, Err, Ok, Result
 
 
@@ -16,7 +16,7 @@ class CreateDisease:
         self._diseases = diseases
 
     async def __call__(self, actor: Actor | None, name: str, description: str | None = None) -> Result[Disease]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, Section.ENFERMEDADES), Err):
             return auth
         name = name.strip()
         if len(name) < 2:

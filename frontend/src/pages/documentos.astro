@@ -5,10 +5,10 @@ import { Alert } from "@/components/ui/alert";
 import { createDocumentsApi } from "@/features/documents/infrastructure/documents.api";
 import { DocumentsPage } from "@/features/documents/presentation/DocumentsPage";
 import { load, serverTransport } from "@/shared/api/server";
-import { canManageContent } from "@/shared/auth/roles";
+import { can } from "@/shared/auth/roles";
 
 const { user, token } = Astro.locals;
-const canManage = canManageContent(user);
+const canManage = can(user, "documentos");
 const api = createDocumentsApi(serverTransport(token));
 const documents = await load(() => api.list());
 const policy = canManage ? await load(() => api.uploadPolicy()) : null;

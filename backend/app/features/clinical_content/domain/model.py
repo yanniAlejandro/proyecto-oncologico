@@ -1,7 +1,7 @@
 """Guías de diagnóstico y protocolos de tratamiento.
 
-Comparten forma (enfermedad + título + contenido); difieren en quién puede leer:
-las guías son solo para personal autenticado, los protocolos son públicos.
+Comparten forma (enfermedad + título + contenido) y lectura (solo usuarios con sesión);
+cada uno tiene su propio permiso de gestión.
 """
 
 from dataclasses import dataclass
@@ -10,7 +10,7 @@ from enum import StrEnum
 from typing import Protocol
 from uuid import UUID
 
-from app.shared.domain.actor import GUIDE_READERS, Role
+from app.shared.domain.actor import Section
 
 
 class ContentKind(StrEnum):
@@ -18,9 +18,9 @@ class ContentKind(StrEnum):
     PROTOCOL = "protocol"
 
     @property
-    def readers(self) -> frozenset[Role] | None:
-        """Roles con lectura; ``None`` = público."""
-        return GUIDE_READERS if self is ContentKind.GUIDE else None
+    def section(self) -> Section:
+        """Permiso necesario para gestionar este tipo de contenido."""
+        return Section.GUIAS if self is ContentKind.GUIDE else Section.PROTOCOLOS
 
     @property
     def not_found_message(self) -> str:

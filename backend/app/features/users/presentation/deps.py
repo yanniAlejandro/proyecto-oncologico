@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.users.application.use_cases import CreateDoctor, DeactivateUser, ListUsers
+from app.features.users.application.use_cases import CreateUser, DeactivateUser, ListUsers, UpdateUser
 from app.features.users.domain.ports import PasswordHasher, UserRepository
 from app.features.users.infrastructure.repository import SqlUserRepository
 from app.shared.infrastructure.database import get_session
@@ -26,9 +26,13 @@ def list_users(users: Users) -> ListUsers:
     return ListUsers(users)
 
 
-def create_doctor(users: Users, hasher: Hasher) -> CreateDoctor:
-    return CreateDoctor(users, hasher)
+def create_user(users: Users, hasher: Hasher) -> CreateUser:
+    return CreateUser(users, hasher)
 
 
-def deactivate_user(users: Users) -> DeactivateUser:
-    return DeactivateUser(users)
+def update_user(users: Users, hasher: Hasher) -> UpdateUser:
+    return UpdateUser(users, hasher)
+
+
+def deactivate_user(users: Users, hasher: Hasher) -> DeactivateUser:
+    return DeactivateUser(users, hasher)

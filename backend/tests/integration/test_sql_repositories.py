@@ -9,16 +9,16 @@ from app.features.documents.domain.model import NewDocument
 from app.features.documents.infrastructure.repository import SqlDocumentRepository
 from app.features.news.domain.model import NewsDraft
 from app.features.news.infrastructure.repository import SqlNewsRepository
-from app.features.users.domain.model import NewUser
+from app.features.users.domain.model import NewUser, UserChanges
 from app.features.users.infrastructure.repository import SqlUserRepository
-from app.shared.domain.actor import Role
+from app.shared.domain.actor import Role, Section
 
 pytestmark = pytest.mark.integration
 
 
 async def author(session):
     return await SqlUserRepository(session).add(
-        NewUser(email="enc@holh.cu", full_name="Encargada", role=Role.ENCARGADO, password_hash="x")
+        NewUser(email="enc@holh.cu", full_name="Encargada", role=Role.MEDICO, password_hash="x")
     )
 
 
@@ -26,8 +26,28 @@ async def test_users_email_lookup_is_case_insensitive_and_deactivation_persists(
     repo = SqlUserRepository(session)
     user = await author(session)
     assert (await repo.get_by_email("ENC@HOLH.CU")).id == user.id
-    await repo.set_active(user.id, False)
+    await repo.update(user.id, UserChanges(is_active=False))
     assert (await repo.get(user.id)).is_active is False
+
+
+async def test_user_permissions_are_replaced_and_admins_counted(session):
+    repo = SqlUserRepository(session)
+    user = await repo.add(
+        NewUser(
+            email="m@holh.cu",
+            full_name="Médica",
+            role=Role.MEDICO,
+            password_hash="x",
+            permissions=frozenset({Section.GUIAS, Section.DOCUMENTOS}),
+        )
+    )
+    assert user.permissions == {Section.GUIAS, Section.DOCUMENTOS}
+    updated = await repo.update(user.id, UserChanges(permissions=frozenset({Section.ENLACES})))
+    assert updated.permissions == {Section.ENLACES}
+    assert (await repo.get(user.id)).permissions == {Section.ENLACES}
+    assert await repo.count_active_admins() == 0
+    await repo.update(user.id, UserChanges(role=Role.ADMINISTRADOR, permissions=frozenset()))
+    assert await repo.count_active_admins() == 1
 
 
 async def test_news_published_filter_search_and_author_name(session):

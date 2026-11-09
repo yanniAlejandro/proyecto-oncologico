@@ -8,18 +8,15 @@ from app.features.clinical_content.domain.model import (
     ContentKind,
 )
 from app.features.diseases.domain.model import DiseaseRepository
-from app.shared.domain.actor import CONTENT_MANAGERS, Actor, require
+from app.shared.domain.actor import Actor, require_section, require_user
 from app.shared.domain.result import AppError, Err, Ok, Result
 
 DISEASE_NOT_FOUND = "Enfermedad no encontrada"
 
 
-def _can_read(kind: ContentKind, actor: Actor | None) -> Result[None]:
-    if kind.readers is None:
-        return Ok(None)
-    if isinstance(auth := require(actor, kind.readers), Err):
-        return auth
-    return Ok(None)
+def _can_read(actor: Actor | None) -> Result[Actor]:
+    """Guías y protocolos: solo personal con sesión."""
+    return require_user(actor)
 
 
 class ListClinicalDocs:
@@ -28,7 +25,7 @@ class ListClinicalDocs:
         self._docs = docs
 
     async def __call__(self, actor: Actor | None, search: str | None = None) -> Result[list[ClinicalDoc]]:
-        if isinstance(access := _can_read(self._kind, actor), Err):
+        if isinstance(access := _can_read(actor), Err):
             return access
         return Ok(await self._docs.list(search.strip() or None if search else None))
 
@@ -39,19 +36,20 @@ class GetClinicalDoc:
         self._docs = docs
 
     async def __call__(self, actor: Actor | None, doc_id: UUID) -> Result[ClinicalDoc]:
-        if isinstance(access := _can_read(self._kind, actor), Err):
+        if isinstance(access := _can_read(actor), Err):
             return access
         doc = await self._docs.get(doc_id)
         return Ok(doc) if doc else Err(AppError.not_found(self._kind.not_found_message))
 
 
 class CreateClinicalDoc:
-    def __init__(self, docs: ClinicalContentRepository, diseases: DiseaseRepository) -> None:
+    def __init__(self, kind: ContentKind, docs: ClinicalContentRepository, diseases: DiseaseRepository) -> None:
+        self._kind = kind
         self._docs = docs
         self._diseases = diseases
 
     async def __call__(self, actor: Actor | None, draft: ClinicalDraft) -> Result[ClinicalDoc]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, self._kind.section), Err):
             return auth
         if await self._diseases.get(draft.disease_id) is None:
             return Err(AppError.invalid(DISEASE_NOT_FOUND))
@@ -65,7 +63,7 @@ class UpdateClinicalDoc:
         self._diseases = diseases
 
     async def __call__(self, actor: Actor | None, doc_id: UUID, changes: dict[str, object]) -> Result[ClinicalDoc]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, self._kind.section), Err):
             return auth
         allowed = {k: v for k, v in changes.items() if k in EDITABLE_FIELDS and v is not None}
         disease_id = allowed.get("disease_id")
@@ -81,7 +79,7 @@ class DeleteClinicalDoc:
         self._docs = docs
 
     async def __call__(self, actor: Actor | None, doc_id: UUID) -> Result[None]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, self._kind.section), Err):
             return auth
         if await self._docs.delete(doc_id):
             return Ok(None)

@@ -10,7 +10,7 @@ from app.features.documents.domain.model import (
     FileToServe,
     NewDocument,
 )
-from app.shared.domain.actor import CONTENT_MANAGERS, Actor, require
+from app.shared.domain.actor import Actor, Section, require_section
 from app.shared.domain.result import AppError, Err, Ok, Result
 
 NOT_FOUND = "Documento no encontrado"
@@ -35,7 +35,7 @@ class UploadDocument:
     async def __call__(
         self, actor: Actor | None, *, title: str, description: str | None, filename: str, data: bytes
     ) -> Result[Document]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, Section.DOCUMENTOS), Err):
             return auth
         file_name = sanitize_filename(filename)
         if isinstance(check := validate_upload(file_name, data, self._max_bytes), Err):
@@ -68,7 +68,7 @@ class AddDocumentLink:
         self._documents = documents
 
     async def __call__(self, actor: Actor | None, *, title: str, description: str | None, url: str) -> Result[Document]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, Section.DOCUMENTOS), Err):
             return auth
         parsed = urlparse(url.strip())
         if parsed.scheme not in ("http", "https") or not parsed.netloc:
@@ -116,7 +116,7 @@ class DeleteDocument:
         self._storage = storage
 
     async def __call__(self, actor: Actor | None, doc_id: UUID) -> Result[None]:
-        if isinstance(auth := require(actor, CONTENT_MANAGERS), Err):
+        if isinstance(auth := require_section(actor, Section.DOCUMENTOS), Err):
             return auth
         doc = await self._documents.get(doc_id)
         if doc is None or not await self._documents.delete(doc_id):

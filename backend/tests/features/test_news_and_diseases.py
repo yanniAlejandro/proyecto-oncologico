@@ -2,13 +2,13 @@ from app.features.diseases.application.use_cases import CreateDisease, ListDisea
 from app.features.news.application import use_cases as uc
 from app.features.news.domain.model import NewsDraft
 from app.shared.domain.result import ErrorKind
-from tests.fakes import DOCTOR, MANAGER, FakeDiseases, FakeNews
+from tests.fakes import DOCTOR, EDITOR, FakeDiseases, FakeNews
 from tests.helpers import err, ok
 
 
 async def seed(repo: FakeNews):
-    published = ok(await uc.CreateNews(repo)(MANAGER, NewsDraft("Pública", "contenido largo de la noticia")))
-    draft = ok(await uc.CreateNews(repo)(MANAGER, NewsDraft("Borrador", "contenido del borrador", is_published=False)))
+    published = ok(await uc.CreateNews(repo)(EDITOR, NewsDraft("Pública", "contenido largo de la noticia")))
+    draft = ok(await uc.CreateNews(repo)(EDITOR, NewsDraft("Borrador", "contenido del borrador", is_published=False)))
     return published, draft
 
 
@@ -16,7 +16,7 @@ async def test_public_listing_hides_drafts_but_managers_see_them():
     repo = FakeNews()
     published, draft = await seed(repo)
     assert [n.id for n in await uc.ListPublishedNews(repo)()] == [published.id]
-    assert {n.id for n in ok(await uc.ListAllNews(repo)(MANAGER))} == {published.id, draft.id}
+    assert {n.id for n in ok(await uc.ListAllNews(repo)(EDITOR))} == {published.id, draft.id}
     err(await uc.ListAllNews(repo)(DOCTOR), ErrorKind.FORBIDDEN)
     err(await uc.GetPublishedNews(repo)(draft.id), ErrorKind.NOT_FOUND)
 
@@ -40,16 +40,16 @@ async def test_only_managers_write_news():
 async def test_update_ignores_unknown_fields_and_delete_reports_missing():
     repo = FakeNews()
     published, _ = await seed(repo)
-    updated = ok(await uc.UpdateNews(repo)(MANAGER, published.id, {"title": "Nuevo", "author_name": "hacker"}))
+    updated = ok(await uc.UpdateNews(repo)(EDITOR, published.id, {"title": "Nuevo", "author_name": "hacker"}))
     assert updated.title == "Nuevo" and updated.author_name != "hacker"
-    ok(await uc.DeleteNews(repo)(MANAGER, published.id))
-    err(await uc.DeleteNews(repo)(MANAGER, published.id), ErrorKind.NOT_FOUND)
+    ok(await uc.DeleteNews(repo)(EDITOR, published.id))
+    err(await uc.DeleteNews(repo)(EDITOR, published.id), ErrorKind.NOT_FOUND)
 
 
 async def test_diseases_are_unique_case_insensitive():
     repo = FakeDiseases("Melanoma")
-    err(await CreateDisease(repo)(MANAGER, "  melanoma "), ErrorKind.CONFLICT)
+    err(await CreateDisease(repo)(EDITOR, "  melanoma "), ErrorKind.CONFLICT)
     err(await CreateDisease(repo)(DOCTOR, "Linfoma"), ErrorKind.FORBIDDEN)
-    created = ok(await CreateDisease(repo)(MANAGER, " Linfoma ", "desc"))
+    created = ok(await CreateDisease(repo)(EDITOR, " Linfoma ", "desc"))
     assert created.name == "Linfoma"
     assert [d.name for d in await ListDiseases(repo)("lin")] == ["Linfoma"]

@@ -21,7 +21,7 @@ from app.main import create_app
 from tests.fakes import (
     ADMIN,
     DOCTOR,
-    MANAGER,
+    EDITOR,
     FakeClinical,
     FakeContact,
     FakeDiseases,
@@ -49,14 +49,14 @@ class World:
     storage: FakeStorage
 
     def as_(self, who: str | None) -> dict[str, str]:
-        actor = {"admin": ADMIN, "encargado": MANAGER, "medico": DOCTOR}.get(who or "")
+        actor = {"admin": ADMIN, "editor": EDITOR, "medico": DOCTOR}.get(who or "")
         return {"Authorization": f"Bearer token:{actor.id}"} if actor else {}
 
 
 @pytest.fixture
 def world(tmp_path) -> World:
     app = create_app()
-    users = FakeUsers.with_actors(ADMIN, MANAGER, DOCTOR)
+    users = FakeUsers.with_actors(ADMIN, EDITOR, DOCTOR)
     diseases = FakeDiseases("Cáncer de mama", "Leucemia")
     w = World(
         client=TestClient(app),

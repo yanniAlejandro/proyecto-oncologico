@@ -6,12 +6,13 @@ from app.features.diseases.infrastructure.orm import DiseaseRow
 from app.features.documents.infrastructure.orm import DocumentRow
 from app.features.interest_links.infrastructure.orm import InterestLinkRow
 from app.features.news.infrastructure.orm import NewsRow
-from app.features.users.infrastructure.orm import UserRow
+from app.features.users.infrastructure.orm import UserPermissionRow, UserRow
 from app.shared.infrastructure.database import Base
 
 __all__ = [
     "Base",
     "UserRow",
+    "UserPermissionRow",
     "DiseaseRow",
     "NewsRow",
     "DiagnosticGuideRow",

@@ -86,7 +86,7 @@ def build_router(kind: ContentKind, provider: Callable[..., ClinicalContentRepos
     @router.post("", response_model=ClinicalOut, status_code=status.HTTP_201_CREATED)
     async def create_doc(payload: ClinicalCreate, repo: Repo, diseases: Diseases, actor: CurrentActor):
         draft = ClinicalDraft(**payload.model_dump())
-        return ClinicalOut.of(unwrap(await uc.CreateClinicalDoc(repo, diseases)(actor, draft)))
+        return ClinicalOut.of(unwrap(await uc.CreateClinicalDoc(kind, repo, diseases)(actor, draft)))
 
     @router.put("/{doc_id}", response_model=ClinicalOut)
     async def update_doc(doc_id: UUID, payload: ClinicalUpdate, repo: Repo, diseases: Diseases, actor: CurrentActor):

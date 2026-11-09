@@ -1,4 +1,4 @@
-import type { UserRole } from "@/shared/auth/roles";
+import type { Section, UserRole } from "@/shared/auth/roles";
 
 export interface UserAccount {
   id: string;
@@ -6,6 +6,7 @@ export interface UserAccount {
   full_name: string;
   role: UserRole;
   is_active: boolean;
+  permissions: Section[];
 }
 
 export interface NewDoctorInput {

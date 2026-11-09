@@ -512,9 +512,7 @@ async def seed_clinical():
             print("Error: no hay enfermedades. Ejecuta primero python -m app.scripts.seed")
             return
 
-        encargado = (
-            await db.execute(select(User).where(User.email == "encargado@oncologico.com"))
-        ).scalar_one_or_none()
+        autor = (await db.execute(select(User).where(User.email == "admin@oncologico.com"))).scalar_one_or_none()
 
         guides_added = 0
         for item in GUIDES:
@@ -530,7 +528,7 @@ async def seed_clinical():
                     disease_id=disease.id,
                     title=item["title"],
                     content=item["content"],
-                    created_by=encargado.id if encargado else None,
+                    created_by=autor.id if autor else None,
                 )
             )
             guides_added += 1
@@ -549,7 +547,7 @@ async def seed_clinical():
                     disease_id=disease.id,
                     title=item["title"],
                     content=item["content"],
-                    created_by=encargado.id if encargado else None,
+                    created_by=autor.id if autor else None,
                 )
             )
             protocols_added += 1
@@ -569,7 +567,7 @@ async def seed_clinical():
                 row = Document(
                     title=item["title"],
                     description=item["description"],
-                    uploaded_by=encargado.id if encargado else None,
+                    uploaded_by=autor.id if autor else None,
                 )
                 db.add(row)
             # Documentos heredados con URL externa: pasan a tener archivo almacenado.

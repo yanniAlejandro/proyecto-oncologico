@@ -37,4 +37,4 @@ class ResolveActor:
         user = await self._users.get(user_id)
         if user is None or not user.is_active:
             return None
-        return Actor(id=user.id, role=user.role, full_name=user.full_name)
+        return Actor(id=user.id, role=user.role, full_name=user.full_name, permissions=user.permissions)

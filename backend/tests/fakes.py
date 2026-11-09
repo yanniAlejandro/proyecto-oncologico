@@ -11,8 +11,8 @@ from app.features.diseases.domain.model import Disease
 from app.features.documents.domain.model import Document, NewDocument
 from app.features.interest_links.domain.model import InterestLink
 from app.features.news.domain.model import News, NewsDraft
-from app.features.users.domain.model import NewUser, User
-from app.shared.domain.actor import Actor, Role
+from app.features.users.domain.model import NewUser, User, UserChanges
+from app.shared.domain.actor import ALL_SECTIONS, Actor, Role
 
 
 def now() -> datetime:
@@ -24,7 +24,8 @@ def actor(role: Role | None, full_name: str = "") -> Actor | None:
 
 
 ADMIN = Actor(id=uuid4(), role=Role.ADMINISTRADOR, full_name="Admin")
-MANAGER = Actor(id=uuid4(), role=Role.ENCARGADO, full_name="Encargado")
+# Médico al que un admin ha concedido todas las secciones (lo que antes hacía el encargado).
+EDITOR = Actor(id=uuid4(), role=Role.MEDICO, full_name="Editora", permissions=ALL_SECTIONS)
 DOCTOR = Actor(id=uuid4(), role=Role.MEDICO, full_name="Médico")
 VISITOR: Actor | None = None
 
@@ -48,6 +49,10 @@ class FakeTokens:
             return None
 
 
+def _key(a: Actor) -> str:
+    return "editor" if a.permissions else a.role.value
+
+
 class FakeUsers:
     def __init__(self, users: list[User] | None = None) -> None:
         self.rows: dict[UUID, User] = {u.id: u for u in users or []}
@@ -58,10 +63,11 @@ class FakeUsers:
             [
                 User(
                     id=a.id,
-                    email=f"{a.role.value}@test.cu",
+                    email=f"{_key(a)}@test.cu",
                     full_name=a.full_name,
                     role=a.role,
-                    password_hash=f"hashed:{a.role.value}",
+                    password_hash=f"hashed:{_key(a)}",
+                    permissions=a.permissions,
                 )
                 for a in actors
             ]
@@ -84,12 +90,21 @@ class FakeUsers:
             role=new.role,
             password_hash=new.password_hash,
             created_at=now(),
+            permissions=new.permissions,
         )
         self.rows[user.id] = user
         return user
 
-    async def set_active(self, user_id: UUID, active: bool) -> None:
-        self.rows[user_id].is_active = active
+    async def update(self, user_id: UUID, changes: UserChanges) -> User | None:
+        user = self.rows.get(user_id)
+        if user is None:
+            return None
+        values = {k: getattr(changes, k) for k in UserChanges.__dataclass_fields__ if getattr(changes, k) is not None}
+        self.rows[user_id] = replace(user, **values)
+        return self.rows[user_id]
+
+    async def count_active_admins(self) -> int:
+        return sum(1 for u in self.rows.values() if u.role is Role.ADMINISTRADOR and u.is_active)
 
 
 class FakeDiseases:

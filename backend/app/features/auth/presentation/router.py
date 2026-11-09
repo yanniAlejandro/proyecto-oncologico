@@ -27,6 +27,8 @@ class MeResponse(BaseModel):
     email: str
     full_name: str
     role: str
+    permissions: list[str]
+    """Secciones que puede gestionar (todas si es administrador)."""
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -40,4 +42,10 @@ async def me(actor: CurrentActor, users: Users):
         raise_http(AppError.unauthenticated())
     user = await users.get(actor.id)
     assert user is not None  # ResolveActor ya comprobó que existe y está activo
-    return MeResponse(id=str(user.id), email=user.email, full_name=user.full_name, role=user.role.value)
+    return MeResponse(
+        id=str(user.id),
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role.value,
+        permissions=sorted(s.value for s in actor.effective_permissions),
+    )
