@@ -10,6 +10,7 @@ from app.features.clinical_content.domain.model import ClinicalDoc, ClinicalDraf
 from app.features.contact.domain.model import DEFAULT_ORGANIZATION, ContactInfo
 from app.features.diseases.domain.model import Disease
 from app.features.documents.domain.model import Document, NewDocument
+from app.features.helpline.domain.model import HelplineConfig, Professional
 from app.features.interest_links.domain.model import InterestLink
 from app.features.publications.domain.model import LinkPreview, NewPublication, Publication
 from app.features.users.domain.model import NewUser, User, UserChanges
@@ -230,6 +231,40 @@ class FakeAbout:
 
     async def delete(self, section_id: UUID) -> bool:
         return self.rows.pop(section_id, None) is not None
+
+
+class FakeHelpline:
+    def __init__(self) -> None:
+        self.config: HelplineConfig | None = None
+        self.rows: dict[UUID, Professional] = {}
+
+    async def get_config(self) -> HelplineConfig | None:
+        return self.config
+
+    async def save_config(self, config: HelplineConfig) -> HelplineConfig:
+        self.config = config
+        return config
+
+    async def list_professionals(self, *, active_only: bool) -> list[Professional]:
+        items = sorted(self.rows.values(), key=lambda p: (p.sort_order, p.full_name))
+        return [p for p in items if p.is_active or not active_only]
+
+    async def get_professional(self, professional_id: UUID) -> Professional | None:
+        return self.rows.get(professional_id)
+
+    async def add_professional(self, data: dict[str, object]) -> Professional:
+        p = Professional(id=uuid4(), **data)  # type: ignore[arg-type]
+        self.rows[p.id] = p
+        return p
+
+    async def update_professional(self, professional_id: UUID, changes: dict[str, object]) -> Professional | None:
+        if professional_id not in self.rows:
+            return None
+        self.rows[professional_id] = replace(self.rows[professional_id], **changes)
+        return self.rows[professional_id]
+
+    async def delete_professional(self, professional_id: UUID) -> bool:
+        return self.rows.pop(professional_id, None) is not None
 
 
 class FakeClinical:

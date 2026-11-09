@@ -1,6 +1,7 @@
 """App real con los adaptadores sustituidos por fakes vía ``dependency_overrides``."""
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -11,6 +12,7 @@ from app.features.clinical_content.presentation.router import GUIDE_REPOSITORY, 
 from app.features.contact.presentation.router import get_contact_repository
 from app.features.diseases.presentation.deps import get_disease_repository
 from app.features.documents.presentation.router import get_document_repository, get_max_upload_bytes
+from app.features.helpline.presentation.router import get_clock, get_helpline_repository
 from app.features.interest_links.presentation.router import get_link_repository
 from app.features.publications.presentation.router import get_link_previewer, get_publication_repository
 from app.features.users.presentation.deps import get_password_hasher, get_user_repository
@@ -26,6 +28,7 @@ from tests.fakes import (
     FakeDiseases,
     FakeDocuments,
     FakeHasher,
+    FakeHelpline,
     FakeLinks,
     FakePreviewer,
     FakePublications,
@@ -70,7 +73,7 @@ def world(tmp_path) -> World:
         documents=FakeDocuments(),
         storage=FakeStorage(tmp_path),
     )
-    links, contact, about = FakeLinks(), FakeContact(), FakeAbout()
+    links, contact, about, helpline = FakeLinks(), FakeContact(), FakeAbout(), FakeHelpline()
     app.dependency_overrides.update(
         {
             get_user_repository: lambda: w.users,
@@ -87,6 +90,9 @@ def world(tmp_path) -> World:
             get_link_repository: lambda: links,
             get_contact_repository: lambda: contact,
             get_about_repository: lambda: about,
+            get_helpline_repository: lambda: helpline,
+            # Lunes 9 nov 2026, 10:00 en La Habana (15:00 UTC).
+            get_clock: lambda: datetime(2026, 11, 9, 15, 0, tzinfo=UTC),
         }
     )
     return w

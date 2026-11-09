@@ -6,6 +6,9 @@ import sans600 from "@fontsource/source-sans-3/files/source-sans-3-latin-600-nor
 import sans700 from "@fontsource/source-sans-3/files/source-sans-3-latin-700-normal.woff2?url";
 import { ClientRouter } from "astro:transitions";
 import { HospitalLogo } from "@/components/site/HospitalLogo";
+import { summarizeSlots, telHref } from "@/features/helpline/domain/types";
+import { getHelplineCached } from "@/features/helpline/infrastructure/helpline.server";
+import HelplineStatus from "@/features/helpline/presentation/HelplineStatus.astro";
 import { can, isAdmin } from "@/shared/auth/roles";
 
 interface Props {
@@ -16,6 +19,7 @@ interface Props {
 const { title, description = "Portal institucional del Hospital Oncológico de La Habana" } = Astro.props;
 const { user } = Astro.locals;
 const path = Astro.url.pathname;
+const helpline = await getHelplineCached();
 const pageTitle = title ? `${title} · Hospital Oncológico de La Habana` : "Hospital Oncológico de La Habana";
 
 const navItems = [
@@ -25,11 +29,13 @@ const navItems = [
   { href: "/protocolos-tratamiento", label: "Protocolos" },
   { href: "/documentos", label: "Documentos" },
   { href: "/enlaces", label: "Enlaces" },
+  { href: "/linea-de-ayuda", label: "Línea de ayuda" },
   { href: "/contacto", label: "Contacto" },
 ];
 const adminItems = [
   ...(can(user, "publicaciones") ? [{ href: "/gestion/publicaciones", label: "Gestión Publicaciones" }] : []),
   ...(can(user, "quienes_somos") ? [{ href: "/gestion/quienes-somos", label: "Gestión Quiénes somos" }] : []),
+  ...(can(user, "linea_ayuda") ? [{ href: "/gestion/linea-ayuda", label: "Gestión Línea de ayuda" }] : []),
   ...(isAdmin(user) ? [{ href: "/gestion/usuarios", label: "Gestión Usuarios" }] : []),
 ];
 const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
@@ -57,8 +63,19 @@ const roleLabel = user?.role === "medico" ? "médico" : user?.role;
     <div class="app-shell">
       <div class="institutional-bar">
         <div class="institutional-bar-inner">
-          <span>Sistema Nacional de Salud Pública · Cuba</span>
-          <span>La Habana</span>
+          <span class="institutional-label">Sistema Nacional de Salud Pública · Cuba</span>
+          {
+            helpline ? (
+              <a href="/linea-de-ayuda" class="helpline-strip">
+                <span>
+                  Línea de ayuda: <strong>{helpline.config.phone}</strong>
+                </span>
+                <HelplineStatus status={helpline.status} compact />
+              </a>
+            ) : (
+              <span>La Habana</span>
+            )
+          }
         </div>
       </div>
 
@@ -143,6 +160,16 @@ const roleLabel = user?.role === "medico" ? "médico" : user?.role;
           </div>
           <div class="footer-info">
             <p>Calzada de Finlay, La Habana, Cuba</p>
+            {
+              helpline && (
+                <p>
+                  Línea de ayuda: <a href={telHref(helpline.config.phone)}>{helpline.config.phone}</a>
+                  {summarizeSlots(helpline.config.slots).length > 0 && (
+                    <span class="footer-schedule"> · {summarizeSlots(helpline.config.slots).join(" · ")}</span>
+                  )}
+                </p>
+              )
+            }
             <p>© {new Date().getFullYear()} Hospital Oncológico de La Habana</p>
           </div>
         </div>

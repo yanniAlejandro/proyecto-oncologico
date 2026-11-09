@@ -1,0 +1,77 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { summarizeSlots, telHref } from "@/features/helpline/domain/types";
+import { createHelplineApi } from "@/features/helpline/infrastructure/helpline.api";
+import HelplineStatus from "@/features/helpline/presentation/HelplineStatus.astro";
+import { load, serverTransport } from "@/shared/api/server";
+
+// Sin caché: aquí se ve siempre el estado al momento.
+const { data, error } = await load(() => createHelplineApi(serverTransport(null)).get());
+---
+
+<BaseLayout title="Línea de ayuda" description="Teléfonos de atención a pacientes y familias del Hospital Oncológico de La Habana">
+  <PageHeader
+    title="Línea de ayuda"
+    subtitle="Atención telefónica a pacientes y familias, al menos 6 horas al día"
+  />
+  {error && <Alert>No se pudo cargar la línea de ayuda: {error}</Alert>}
+  {
+    data && (
+      <>
+        <section class:list={["helpline-main", { "is-closed": !data.status.available_now }]} aria-labelledby="hl-main">
+          <div>
+            <h2 id="hl-main">{data.config.label}</h2>
+            <a class="helpline-phone" href={telHref(data.config.phone)}>
+              {data.config.phone}
+            </a>
+            <HelplineStatus status={data.status} />
+          </div>
+          <div>
+            <h3>Horario de atención</h3>
+            <ul class="helpline-schedule">
+              {summarizeSlots(data.config.slots).map((line) => (
+                <li>{line}</li>
+              ))}
+            </ul>
+          </div>
+        </section>
+
+        <div class:list={["helpline-offhours", { "is-active": !data.status.available_now }]} role="note">
+          <p>{data.config.off_hours_message}</p>
+          {data.config.emergency_phone && (
+            <p>
+              Urgencias: <a href={telHref(data.config.emergency_phone)}>{data.config.emergency_phone}</a>
+            </p>
+          )}
+        </div>
+
+        <div class="section-heading">
+          <h3>Profesionales del hospital</h3>
+          <p>Puedes contactar directamente con ellos en su horario de atención</p>
+        </div>
+        <div class="card-grid">
+          {data.professionals.map((p) => (
+            <article class="card helpline-pro">
+              <span class="publication-domain">{p.specialty}</span>
+              <h3>{p.full_name}</h3>
+              <a class="helpline-pro-phone" href={telHref(p.phone)}>
+                {p.phone}
+              </a>
+              {p.status && <HelplineStatus status={p.status} />}
+              {p.slots.length > 0 && (
+                <ul class="helpline-schedule">
+                  {summarizeSlots(p.slots).map((line) => (
+                    <li>{line}</li>
+                  ))}
+                </ul>
+              )}
+            </article>
+          ))}
+          {data.professionals.length === 0 && <p class="muted">No hay profesionales publicados.</p>}
+        </div>
+      </>
+    )
+  }
+</BaseLayout>

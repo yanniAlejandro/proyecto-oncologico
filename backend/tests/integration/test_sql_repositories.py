@@ -107,3 +107,33 @@ async def test_documents_roundtrip_with_storage_fields(session):
     assert not link.has_stored_file
     assert {d.id for d in await repo.list("guía")} == {link.id}
     assert await repo.delete(doc.id) and await repo.get(doc.id) is None
+
+
+async def test_helpline_config_singleton_and_professional_slots_roundtrip(session):
+    from dataclasses import replace
+    from datetime import time
+
+    from app.features.helpline.domain.model import DEFAULT_CONFIG, TimeSlot
+    from app.features.helpline.infrastructure.repository import SqlHelplineRepository
+
+    repo = SqlHelplineRepository(session)
+    assert await repo.get_config() is None
+    await repo.save_config(DEFAULT_CONFIG)
+    saved = await repo.save_config(replace(DEFAULT_CONFIG, phone="+53 7 649 0000"))
+    assert saved.phone == "+53 7 649 0000" and saved.slots == DEFAULT_CONFIG.slots
+    slot = TimeSlot(2, time(9), time(15, 30))
+    pro = await repo.add_professional(
+        {
+            "full_name": "Dra. Ana",
+            "specialty": "Pediatría",
+            "phone": "+53 5 1",
+            "sort_order": 0,
+            "is_active": True,
+            "slots": [slot],
+        }
+    )
+    assert pro.slots == [slot]
+    updated = await repo.update_professional(pro.id, {"is_active": False, "slots": []})
+    assert updated.slots == [] and not updated.is_active
+    assert await repo.list_professionals(active_only=True) == []
+    assert await repo.delete_professional(pro.id)

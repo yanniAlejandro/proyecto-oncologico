@@ -5,6 +5,7 @@ from app.features.clinical_content.infrastructure.orm import DiagnosticGuideRow,
 from app.features.contact.infrastructure.orm import ContactInfoRow
 from app.features.diseases.infrastructure.orm import DiseaseRow
 from app.features.documents.infrastructure.orm import DocumentRow
+from app.features.helpline.infrastructure.orm import HelplineConfigRow, HelplineProfessionalRow
 from app.features.interest_links.infrastructure.orm import InterestLinkRow
 from app.features.publications.infrastructure.orm import PublicationRow
 from app.features.users.infrastructure.orm import UserPermissionRow, UserRow
@@ -22,4 +23,6 @@ __all__ = [
     "InterestLinkRow",
     "ContactInfoRow",
     "AboutSectionRow",
+    "HelplineConfigRow",
+    "HelplineProfessionalRow",
 ]

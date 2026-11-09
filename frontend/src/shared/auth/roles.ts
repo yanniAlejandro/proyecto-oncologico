@@ -39,6 +39,7 @@ export const canUsePanel = (user: MaybeUser) => isAdmin(user) || (user?.permissi
 export const PROTECTED_ROUTES: { prefix: string; allowed: (user: MaybeUser) => boolean }[] = [
   { prefix: "/gestion/publicaciones", allowed: (u) => can(u, "publicaciones") },
   { prefix: "/gestion/quienes-somos", allowed: (u) => can(u, "quienes_somos") },
+  { prefix: "/gestion/linea-ayuda", allowed: (u) => can(u, "linea_ayuda") },
   { prefix: "/gestion/usuarios", allowed: isAdmin },
 ];
 

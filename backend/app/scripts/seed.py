@@ -8,6 +8,9 @@ from app.features.about.domain.model import slugify
 from app.features.about.infrastructure.orm import AboutSectionRow as AboutSection
 from app.features.contact.infrastructure.orm import ContactInfoRow as ContactInfo
 from app.features.diseases.infrastructure.orm import DiseaseRow as Disease
+from app.features.helpline.domain.model import DEFAULT_CONFIG, slot_to_json
+from app.features.helpline.infrastructure.orm import HelplineConfigRow as HelplineConfig
+from app.features.helpline.infrastructure.orm import HelplineProfessionalRow as HelplineProfessional
 from app.features.interest_links.infrastructure.orm import InterestLinkRow as InterestLink
 from app.features.users.infrastructure.orm import UserPermissionRow as UserPermission
 from app.features.users.infrastructure.orm import UserRow as User
@@ -106,6 +109,53 @@ async def seed():
         if about.scalar_one_or_none() is None:
             for order, (title, body) in enumerate(DRAFTS, start=1):
                 db.add(AboutSection(slug=slugify(title), title=title, body=body, sort_order=order * 10))
+
+        if await db.get(HelplineConfig, 1) is None:
+            c = DEFAULT_CONFIG
+            db.add(
+                HelplineConfig(
+                    id=1,
+                    phone=c.phone,
+                    label=c.label,
+                    off_hours_message=c.off_hours_message,
+                    emergency_phone=c.emergency_phone,
+                    slots=[slot_to_json(s) for s in c.slots],
+                )
+            )
+        pros = await db.execute(select(HelplineProfessional).limit(1))
+        if pros.scalar_one_or_none() is None:
+            weekdays = range(5)
+            # Ejemplos con datos ficticios: sustituir por los profesionales reales desde la gestión.
+            for order, (name, specialty, phone, start, end) in enumerate(
+                [
+                    (
+                        "Oncólogo/a pediátrico/a de guardia (ejemplo)",
+                        "Oncología pediátrica",
+                        "+53 7 000 0101",
+                        "08:00",
+                        "14:00",
+                    ),
+                    (
+                        "Enfermera/o de referencia (ejemplo)",
+                        "Enfermería oncológica",
+                        "+53 7 000 0102",
+                        "10:00",
+                        "16:00",
+                    ),
+                    ("Psicólogo/a (ejemplo)", "Psicología", "+53 7 000 0103", "09:00", "15:00"),
+                ],
+                start=1,
+            ):
+                db.add(
+                    HelplineProfessional(
+                        full_name=name,
+                        specialty=specialty,
+                        phone=phone,
+                        sort_order=order * 10,
+                        is_active=True,
+                        slots=[{"weekday": d, "start": start, "end": end} for d in weekdays],
+                    )
+                )
 
         await db.commit()
         print("Seed completado.")

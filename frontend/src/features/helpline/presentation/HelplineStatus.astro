@@ -1,0 +1,16 @@
+---
+import { formatNextOpening, type Status } from "../domain/types";
+
+interface Props {
+  status: Status;
+  compact?: boolean;
+}
+const { status, compact = false } = Astro.props;
+const next = formatNextOpening(status.next_opening);
+---
+
+<span class:list={["helpline-status", status.available_now ? "is-open" : "is-closed"]}>
+  <span class="helpline-dot" aria-hidden="true"></span>
+  {status.available_now ? "Disponible ahora" : "Fuera de horario"}
+  {!compact && !status.available_now && next && <span class="helpline-next">· abre {next}</span>}
+</span>

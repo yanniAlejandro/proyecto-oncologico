@@ -7,6 +7,7 @@ from app.features.clinical_content.presentation.router import guides_router, pro
 from app.features.contact.presentation.router import router as contact_router
 from app.features.diseases.presentation.router import router as diseases_router
 from app.features.documents.presentation.router import router as documents_router
+from app.features.helpline.presentation.router import router as helpline_router
 from app.features.interest_links.presentation.router import router as links_router
 from app.features.publications.presentation.router import router as publications_router
 from app.features.users.presentation.router import router as users_router
@@ -26,6 +27,7 @@ def build_api_router() -> APIRouter:
     api.include_router(links_router, prefix="/interest-links", tags=["interest-links"])
     api.include_router(contact_router, prefix="/contact", tags=["contact"])
     api.include_router(about_router, prefix="/about", tags=["about"])
+    api.include_router(helpline_router, prefix="/helpline", tags=["helpline"])
     return api
 
 

@@ -25,6 +25,9 @@ ROLES = [None, "medico", "editor", "admin"]
 MATRIX = [
     ("GET", "/api/v1/publications", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/about", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/helpline", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/helpline/professionals", None, [401, 403, 200, 200]),
+    ("PUT", "/api/v1/helpline", {"phone": "+53 7 649 0000"}, [401, 403, 200, 200]),
     ("POST", "/api/v1/publications/preview", {"url": "https://desconocida.cu"}, [401, 403, 200, 200]),
     ("GET", "/api/v1/diagnostic-guides", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/treatment-protocols", None, [401, 200, 200, 200]),
@@ -243,3 +246,25 @@ def test_about_section_crud_over_http(world: World):
     assert upd.status_code == 200 and upd.json()["image_url"] is None and upd.json()["body"] == "Nuevo texto"
     assert c.delete(f"/api/v1/about/{section['id']}", headers=world.as_("medico")).status_code == 403
     assert c.delete(f"/api/v1/about/{section['id']}", headers=h).status_code == 204
+
+
+def test_helpline_public_view_with_availability(world: World):
+    c, h = world.client, world.as_("editor")
+    pro = {
+        "full_name": "Dra. Ana Pérez",
+        "specialty": "Oncología pediátrica",
+        "phone": "+53 5 123 4567",
+        "slots": [{"weekday": 0, "start": "09:00", "end": "11:00"}, {"weekday": 2, "start": "09:00", "end": "11:00"}],
+    }
+    assert c.post("/api/v1/helpline/professionals", json=pro, headers=h).status_code == 201
+    bad = {**pro, "slots": [{"weekday": 0, "start": "12:00", "end": "09:00"}]}
+    assert c.post("/api/v1/helpline/professionals", json=bad, headers=h).status_code == 422
+
+    data = c.get("/api/v1/helpline").json()
+    assert data["status"]["available_now"] is True  # lunes 10:00 La Habana, horario por defecto 8-16
+    assert data["config"]["meets_minimum"] is True and len(data["config"]["daily_hours"]) == 7
+    assert data["professionals"][0]["status"]["available_now"] is True
+    assert data["weekdays"][0] == "Lunes"
+
+    short = c.put("/api/v1/helpline", json={"slots": [{"weekday": 0, "start": "08:00", "end": "10:00"}]}, headers=h)
+    assert short.status_code == 200 and short.json()["meets_minimum"] is False
