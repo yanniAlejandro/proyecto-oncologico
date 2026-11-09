@@ -1,12 +1,14 @@
 import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
+import { login, logout, sidebar } from "./helpers";
 
 /**
- * Flujo completo del repositorio de documentos respetando roles:
- * encargado sube un PDF → queda en STORAGE_DIR → cualquiera lo ve y lo descarga idéntico →
- * el visitante no puede gestionar → al eliminarlo desaparece del disco.
+ * Flujo completo del repositorio de documentos respetando permisos:
+ * una médica con permiso «documentos» sube un PDF desde el panel → queda en STORAGE_DIR →
+ * cualquiera lo ve y lo descarga idéntico en /documentos (solo lectura) →
+ * un médico sin permisos no puede gestionar → al eliminarlo desaparece del disco.
  */
 
 const FIXTURE = path.join(import.meta.dirname, "fixtures/protocolo-prueba-e2e.pdf");
@@ -25,16 +27,6 @@ async function storedFiles(): Promise<Set<string>> {
   );
 }
 
-async function login(page: Page, email: string, password: string) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Acceso para personal médico" }).click();
-  const dialog = page.getByRole("dialog", { name: "Acceso institucional" });
-  await dialog.getByLabel("Correo electrónico").fill(email);
-  await dialog.getByLabel("Contraseña").fill(password);
-  await dialog.getByRole("button", { name: "Ingresar al portal" }).click();
-  await expect(page.getByRole("button", { name: "Cerrar sesión" })).toBeVisible();
-}
-
 test.describe.configure({ mode: "serial" });
 
 test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, testInfo) => {
@@ -49,10 +41,20 @@ test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, test
     await expect(page.getByRole("button", { name: "+ Nuevo documento" })).toHaveCount(0);
   });
 
-  await test.step("encargado inicia sesión y abre Documentos", async () => {
-    await login(page, "encargado@oncologico.com", "Encargado123!");
-    await page.getByRole("navigation", { name: "Navegación principal" }).getByRole("link", { name: "Documentos" }).click();
+  await test.step("médico sin permisos: no tiene panel ni puede entrar", async () => {
+    await login(page, "medico");
+    await expect(page.getByRole("link", { name: "Panel de gestión" })).toHaveCount(0);
+    await page.goto("/admin/documentos");
+    await expect(page).toHaveURL(/\/$/);
+    await logout(page);
+  });
+
+  await test.step("la editora entra al panel y abre Documentos", async () => {
+    await login(page, "editora");
+    await page.getByRole("link", { name: "Panel de gestión" }).click();
+    await sidebar(page).getByRole("link", { name: "Documentos" }).click();
     await expect(page.getByRole("heading", { name: "Repositorio de Documentos" })).toBeVisible();
+    await expect(sidebar(page).getByRole("link", { name: "Usuarios y permisos" })).toHaveCount(0);
   });
 
   const before = await storedFiles();
@@ -108,9 +110,8 @@ test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, test
     expect(sha256(await fs.readFile((await download.path())!))).toBe(originalHash);
   });
 
-  await test.step("visitante: lo ve y descarga, pero no puede eliminar", async () => {
-    await page.getByRole("button", { name: "Cerrar sesión" }).click();
-    await expect(page.getByText("Acceso público")).toBeVisible();
+  await test.step("visitante: lo ve y descarga en la página pública, pero no puede eliminar", async () => {
+    await logout(page);
     await page.goto("/documentos");
     await expect(row).toBeVisible();
     await expect(row.getByRole("button", { name: `Ver ${TITLE}` })).toBeVisible();
@@ -122,9 +123,9 @@ test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, test
     return;
   }
 
-  await test.step("encargado lo elimina (con confirmación) y el archivo desaparece del disco", async () => {
-    await login(page, "encargado@oncologico.com", "Encargado123!");
-    await page.goto("/documentos");
+  await test.step("la editora lo elimina desde el panel (con confirmación) y el archivo desaparece del disco", async () => {
+    await login(page, "editora");
+    await page.goto("/admin/documentos");
     await row.getByRole("button", { name: "Eliminar" }).click();
     await page.getByRole("alertdialog").getByRole("button", { name: "Eliminar" }).click();
     await expect(row).toHaveCount(0);

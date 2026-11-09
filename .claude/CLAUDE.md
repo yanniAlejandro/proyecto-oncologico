@@ -1,6 +1,6 @@
 # Portal Oncológico — Hospital Oncológico de La Habana (tesis)
 
-Portal institucional de recursos clínicos: noticias, guías de diagnóstico, protocolos de tratamiento, repositorio de documentos (subir / ver / descargar), enlaces y contacto, con control de acceso por roles. Monorepo con dos partes independientes.
+Portal institucional del Hospital Oncológico de La Habana: «Quiénes somos» (portada), publicaciones con vista previa de enlaces, guías de diagnóstico, protocolos de tratamiento, repositorio de documentos (subir / ver / descargar), enlaces, línea de ayuda y contacto. Portal público de solo consulta + panel de gestión `/admin` con permisos por sección. Monorepo con dos partes independientes.
 
 ---
 
@@ -47,10 +47,10 @@ E2E_BASE_URL=http://localhost:4321 pnpm e2e   # Playwright E2E (resultados en do
 app/
 ├── main.py                     # composition root: create_app() incluye los routers de cada feature
 ├── shared/
-│   ├── domain/                 # Result (Ok/Err + AppError), Actor + Role + require() (reglas de rol)
-│   ├── infrastructure/         # config, database (Base, get_session), security (bcrypt, JWT), orm_registry
+│   ├── domain/                 # Result (Ok/Err + AppError), Actor + Role + Section (permisos), FileStorage, image_policy
+│   ├── infrastructure/         # config, database (Base, get_session), security (bcrypt, JWT), local_storage, orm_registry
 │   └── presentation/errors.py  # AppError → HTTP (unwrap)
-└── features/<feature>/         # users, auth, news, diseases, clinical_content, documents, interest_links, contact
+└── features/<feature>/         # users, auth, publications, about, helpline, diseases, clinical_content, documents, interest_links, contact
     ├── domain/                 # dataclasses + reglas puras + puertos (Protocol). Sin FastAPI/SQLAlchemy.
     ├── application/use_cases.py# una clase por caso de uso (__call__), recibe Actor, devuelve Result
     ├── infrastructure/         # orm.py (SQLAlchemy), repository.py (adaptador), otros adaptadores (local_storage)
@@ -59,7 +59,9 @@ app/
 
 Reglas:
 - `domain` no importa frameworks. `presentation` solo llama casos de uso, nunca repositorios para lógica.
-- **Los roles se comprueban en el caso de uso** (`require(actor, CONTENT_MANAGERS)`), no en el router: así se testean sin HTTP.
+- **Los permisos se comprueban en el caso de uso**, no en el router: `require_section(actor, Section.X)` para gestionar, `require_admin` (usuarios, contacto), `require_user` (leer guías y protocolos). Así se testean sin HTTP.
+- Nueva sección gestionable → añadir a `Section` (backend) y a `SECTIONS`/`SECTION_LABELS`/`ADMIN_NAV` (frontend, `shared/auth/roles.ts`). `user_permissions.section` es texto: no requiere migración.
+- Descargas de URLs de usuarios (vista previa de publicaciones): siempre por `HttpLinkPreviewer` (protección SSRF). Nunca `httpx.get(url)` directo.
 - Fallos esperados → `Err(AppError.xxx(...))`; excepciones solo para bugs. El router hace `unwrap(...)`.
 - Entre features solo se importa `domain`/`application` (excepción: `auth.presentation.deps.CurrentActor` y providers `deps.py`).
 - Tras `commit()`, no leer atributos de una fila después de `expire_all()` (dispara IO síncrono → `MissingGreenlet`).
@@ -69,9 +71,9 @@ Reglas:
 
 ```
 src/
-├── middleware.ts           # cookie → /auth/me → locals.user; guardas de rol en servidor (PROTECTED_ROUTES)
-├── layouts/BaseLayout.astro# barra institucional, cabecera, menú por rol, pie
-├── pages/                  # rutas .astro (cargan datos en SSR) + api/auth/{login,logout}.ts + api/v1/[...path].ts (proxy)
+├── middleware.ts           # cookie → /auth/me → locals.user (con permisos); guardas del panel (ADMIN_NAV) y redirección /gestion/* → /admin/*
+├── layouts/                # BaseLayout (portal) · AdminLayout (panel /admin, barra lateral) · HeadCommon
+├── pages/                  # portal (solo lectura) + admin/* (panel) + api/auth/{login,logout}.ts + api/v1/[...path].ts (proxy)
 ├── features/<feature>/
 │   ├── domain/             # tipos + reglas puras (p. ej. documents: previewKind, validateFile)
 │   ├── infrastructure/     # create<X>Api(transport) — misma API en SSR y en islas
@@ -84,8 +86,9 @@ src/
 
 Reglas:
 - **Sesión**: el JWT vive en cookie httpOnly `holh_session`; el navegador nunca lo ve. Las islas llaman a `/api/v1/*` (proxy de Astro), que añade `Authorization`.
-- Permisos de UI con `shared/auth/roles.ts` (espejo de `app/shared/domain/actor.py`). El backend es la autoridad: la UI solo oculta.
-- Nuevas rutas protegidas → añadir a `PROTECTED_ROUTES`.
+- Permisos de UI con `shared/auth/roles.ts` (espejo de `app/shared/domain/actor.py`): `can(user, section)`, `isAdmin`, `canUsePanel`. El backend es la autoridad: la UI solo oculta.
+- Las páginas públicas **no** gestionan nada. Toda la gestión vive en `/admin/*`; cada pantalla del panel se declara en `ADMIN_NAV` (ruta, grupo, icono y requisito), que alimenta la barra lateral y las guardas del middleware.
+- Textos editables con formato: `components/site/RichText.tsx` (sin HTML). Nunca `set:html` con contenido de usuarios.
 - `.astro` para lo estático; `.tsx` solo para islas interactivas (`client:load`).
 - `tailwind-merge`: el interlineado va en la misma clase que el tamaño (`text-[0.9rem]/[normal]`), si no se descarta.
 
@@ -93,14 +96,13 @@ Reglas:
 
 | Rol | Puede |
 |---|---|
-| Visitante | Noticias, protocolos, documentos (ver/descargar), enlaces, contacto |
-| Médico | + guías de diagnóstico |
-| Encargado | + CRUD noticias, guías, protocolos, enfermedades, enlaces; subir/eliminar documentos |
-| Administrador | Todo + crear/desactivar cuentas de médico, editar contacto |
+| Visitante | Portal público: quiénes somos, publicaciones, documentos (ver/descargar), enlaces, línea de ayuda, contacto |
+| Médico | + guías y protocolos (lectura). Por defecto solo lee; gestiona (CRUD completo) las secciones que le conceda un admin |
+| Administrador | Todo + contacto + usuarios y permisos (también otros admins). Salvaguardas: no auto-desactivarse/degradarse, nunca 0 admins |
 
 ## Design Constraints
 
-- **Paridad visual** con `docs/visual-baseline/` (capturas del SPA React original). Solo ajustes menores de UX. Verificar con `/visual`.
+- **Referencia visual**: `docs/visual-baseline/` (portal de cierre, 2026-11-09). La del SPA React original se conserva en `docs/visual-baseline-original/`. Verificar con `/visual`.
 - Colores HOLH (`--holh-blue #0b3d5c`, `--holh-teal #2a8f9e`, …) y fuente Source Sans 3 (autoalojada): no cambiar.
 - Español en UI, mensajes de error y commits de documentación.
 
@@ -117,7 +119,8 @@ Reglas:
 | `docs/SESSION-LOG.md` | Registro de sesiones, la más reciente arriba. Lo actualiza `/done`. |
 | `docs/BUGS.md` | Bugs con estado `open`/`fixed` y fichero de referencia. |
 | `docs/decisions/` | ADRs (`YYYY-MM-DD-slug.md`). |
-| `docs/visual-baseline/` | Referencia visual (PNG + HTML) del portal original. **No regenerar** salvo cambio de diseño acordado. |
+| `docs/visual-baseline/` | Referencia visual actual (portal + panel, 4 perfiles). **No regenerar** salvo cambio de diseño acordado. |
+| `docs/visual-baseline-original/` | Capturas del SPA React original (histórico, no se compara). |
 | `docs/visual-current/` | Última captura de `/visual` + `report.md` + `*.diff.png`. |
 | `docs/*.md` | Documentos de tema (análisis, guías). |
 

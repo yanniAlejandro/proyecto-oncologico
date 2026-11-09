@@ -3,17 +3,18 @@
 //   pnpm visual                       → captura en docs/visual-current y compara con docs/visual-baseline
 //   pnpm visual -- --base http://localhost:4321 --out ../docs/visual-current --baseline ../docs/visual-baseline
 //
-// Requisitos: API y frontend levantados, BD con los seeds. Chromium de Playwright en ~/.cache/ms-playwright
-// (o CHROMIUM_PATH). Informe: <out>/report.md con el % de píxeles distintos por pantalla.
+// Requisitos: API y frontend levantados, BD con los seeds. Chromium de Playwright
+// (`pnpm exec playwright install chromium`, o CHROMIUM_PATH). Informe: <out>/report.md con el % de píxeles distintos por pantalla.
 import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import pixelmatch from "pixelmatch";
-import { chromium } from "playwright-core";
+import { chromium } from "@playwright/test";
 import { PNG } from "pngjs";
 
 const { values: args } = parseArgs({
+  // pnpm reenvía el «--» de `pnpm visual -- --base …`; tras «--» parseArgs lo trataría todo como posicional.
+  args: process.argv.slice(2).filter((a) => a !== "--"),
   options: {
     base: { type: "string", default: "http://localhost:4321" },
     out: { type: "string", default: "../docs/visual-current" },
@@ -23,38 +24,35 @@ const { values: args } = parseArgs({
 
 const USERS = {
   visitante: null,
-  medico: ["medico@oncologico.com", "Medico123!"],
-  encargado: ["encargado@oncologico.com", "Encargado123!"],
+  medico: ["medico@oncologico.com", "Medico123!"], // sin permisos: solo lectura
+  editora: ["editora@oncologico.com", "Editora123!"], // médica con permisos (publicaciones, documentos, enlaces)
   admin: ["admin@oncologico.com", "Admin123!"],
 };
+// Las rutas sin acceso redirigen: el nombre del fichero lo indica (__redirect_...).
 const ROUTES = [
-  ["01-noticias", "/"],
-  ["02-guias", "/guias-diagnostico"],
-  ["03-protocolos", "/protocolos-tratamiento"],
-  ["04-documentos", "/documentos"],
-  ["05-enlaces", "/enlaces"],
-  ["06-contacto", "/contacto"],
-  ["07-gestion-noticias", "/gestion/noticias"],
-  ["08-gestion-usuarios", "/gestion/usuarios"],
+  ["01-quienes-somos", "/"],
+  ["02-publicaciones", "/publicaciones"],
+  ["03-guias", "/guias-diagnostico"],
+  ["04-protocolos", "/protocolos-tratamiento"],
+  ["05-documentos", "/documentos"],
+  ["06-enlaces", "/enlaces"],
+  ["07-linea-ayuda", "/linea-de-ayuda"],
+  ["08-contacto", "/contacto"],
+  ["09-panel-resumen", "/admin"],
+  ["10-panel-publicaciones", "/admin/publicaciones"],
+  ["11-panel-usuarios", "/admin/usuarios"],
 ];
 const MODALS = [
   ["visitante", "m01-login", "/", "Acceso para personal médico"],
   ["medico", "m02-guia-leer", "/guias-diagnostico", "Leer"],
-  ["encargado", "m03-guia-nueva", "/guias-diagnostico", "+ Nueva guía"],
-  ["encargado", "m04-protocolo-editar", "/protocolos-tratamiento", "Editar"],
-  ["encargado", "m05-documento-nuevo", "/documentos", "+ Nuevo documento"],
-  ["encargado", "m06-noticia-nueva", "/gestion/noticias", "+ Nueva noticia"],
-  ["admin", "m07-usuario-nuevo", "/gestion/usuarios", "+ Nuevo médico"],
+  ["editora", "m03-publicacion-nueva", "/admin/publicaciones", "+ Nueva publicación"],
+  ["editora", "m04-documento-nuevo", "/admin/documentos", "+ Nuevo documento"],
+  ["admin", "m05-guia-nueva", "/admin/guias", "+ Nueva guía"],
+  ["admin", "m06-protocolo-editar", "/admin/protocolos", "Editar"],
+  ["admin", "m07-usuario-editar", "/admin/usuarios", "Editar"],
   ["visitante", "m08-documento-visor", "/documentos", /^Ver /],
 ];
 const VIEWPORTS = { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844 } };
-
-async function chromiumPath() {
-  if (process.env.CHROMIUM_PATH) return process.env.CHROMIUM_PATH;
-  const root = path.join(os.homedir(), ".cache/ms-playwright");
-  const dirs = (await fs.readdir(root)).filter((d) => d.startsWith("chromium-")).sort();
-  return path.join(root, dirs.at(-1), "chrome-linux/chrome");
-}
 
 async function settle(page) {
   await page.waitForLoadState("networkidle");
@@ -82,7 +80,8 @@ async function diffPercent(aPath, bPath, diffPath) {
   }
 }
 
-const browser = await chromium.launch({ executablePath: await chromiumPath() });
+// El Chromium de @playwright/test (`pnpm exec playwright install chromium`), o CHROMIUM_PATH.
+const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const captured = [];
 for (const [role, creds] of Object.entries(USERS)) {
   for (const [vpName, viewport] of Object.entries(VIEWPORTS)) {
