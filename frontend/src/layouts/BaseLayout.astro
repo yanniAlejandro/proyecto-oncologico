@@ -1,0 +1,156 @@
+---
+import HeadCommon from "./HeadCommon.astro";
+import { HospitalLogo } from "@/components/site/HospitalLogo";
+import { summarizeSlots, telHref } from "@/features/helpline/domain/types";
+import { getHelplineCached } from "@/features/helpline/infrastructure/helpline.server";
+import HelplineStatus from "@/features/helpline/presentation/HelplineStatus.astro";
+import { canUsePanel, loginHref, MEMBER_ROUTES } from "@/shared/auth/roles";
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description = "Portal institucional del Hospital Oncológico de La Habana" } = Astro.props;
+const { user } = Astro.locals;
+const path = Astro.url.pathname;
+const helpline = await getHelplineCached();
+const pageTitle = title ? `${title} · Hospital Oncológico de La Habana` : "Hospital Oncológico de La Habana";
+
+const navItems = [
+  { href: "/", label: "Quiénes somos" },
+  { href: "/publicaciones", label: "Publicaciones" },
+  { href: "/guias-diagnostico", label: "Guías de Diagnóstico" },
+  { href: "/protocolos-tratamiento", label: "Protocolos" },
+  { href: "/documentos", label: "Documentos" },
+  { href: "/enlaces", label: "Enlaces" },
+  { href: "/linea-de-ayuda", label: "Línea de ayuda" },
+  { href: "/contacto", label: "Contacto" },
+].filter((item) => user || !MEMBER_ROUTES.includes(item.href)); // guías, protocolos y documentos: solo con sesión
+const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
+const roleLabel = user?.role === "medico" ? "médico" : user?.role;
+---
+
+<!doctype html>
+<!-- Navegación sin recarga (como el SPA original): sin animación para no alterar el aspecto. -->
+<html lang="es" transition:animate="none">
+  <head>
+    <HeadCommon title={pageTitle} description={description} />
+  </head>
+  <body>
+    <a href="#contenido" class="skip-link">Saltar al contenido</a>
+    <div class="app-shell">
+      <div class="institutional-bar">
+        <div class="institutional-bar-inner">
+          <span class="institutional-label">Sistema Nacional de Salud Pública · Cuba</span>
+          {
+            helpline ? (
+              <a href="/linea-de-ayuda" class="helpline-strip">
+                <span>
+                  Línea de ayuda: <strong>{helpline.config.phone}</strong>
+                </span>
+                <HelplineStatus status={helpline.status} compact />
+              </a>
+            ) : (
+              <span>La Habana</span>
+            )
+          }
+        </div>
+      </div>
+
+      <header class="app-header">
+        <div class="header-inner">
+          <a href="/" class="brand">
+            <HospitalLogo />
+            <div>
+              <h1>Hospital Oncológico de La Habana</h1>
+              <p>Portal institucional de recursos clínicos</p>
+            </div>
+          </a>
+
+          <div class="header-right">
+            <div class="user-area">
+              {
+                user ? (
+                  <>
+                    <div class="user-badge">
+                      <span class="user-name">{user.full_name}</span>
+                      <span class="user-role">{roleLabel}</span>
+                    </div>
+                    <form method="post" action="/api/auth/logout" data-astro-reload>
+                      <button
+                        type="submit"
+                        class="inline-flex cursor-pointer items-center rounded-holh border border-solid border-holh-border bg-transparent px-[0.85rem] py-[0.4rem] text-[0.82rem] leading-[normal] font-semibold text-holh-blue transition-all duration-200 hover:bg-holh-cream"
+                      >
+                        Cerrar sesión
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <a href={loginHref(path === "/login" ? "/" : path + Astro.url.search)} class="login-link">
+                    Iniciar sesión
+                  </a>
+                )
+              }
+            </div>
+          </div>
+        </div>
+
+        <nav class="main-nav" aria-label="Navegación principal">
+          <div class="main-nav-inner">
+            {
+              navItems.map((item) => (
+                <a
+                  href={item.href}
+                  class:list={[{ active: isActive(item.href) }]}
+                  aria-current={isActive(item.href) ? "page" : undefined}
+                >
+                  {item.label}
+                </a>
+              ))
+            }
+            {
+              canUsePanel(user) && (
+                <a href="/admin" class="nav-admin nav-admin-first">
+                  Panel de gestión
+                </a>
+              )
+            }
+          </div>
+        </nav>
+      </header>
+
+      <main class="app-main" id="contenido">
+        <section class="page">
+          <slot />
+        </section>
+      </main>
+
+      <footer class="app-footer">
+        <div class="footer-inner">
+          <div class="footer-brand">
+            <HospitalLogo size={40} />
+            <div>
+              <strong>Hospital Oncológico de La Habana</strong>
+              <p>Comprometidos con la atención oncológica integral</p>
+            </div>
+          </div>
+          <div class="footer-info">
+            <p>Calzada de Finlay, La Habana, Cuba</p>
+            {
+              helpline && (
+                <p>
+                  Línea de ayuda: <a href={telHref(helpline.config.phone)}>{helpline.config.phone}</a>
+                  {summarizeSlots(helpline.config.slots).length > 0 && (
+                    <span class="footer-schedule"> · {summarizeSlots(helpline.config.slots).join(" · ")}</span>
+                  )}
+                </p>
+              )
+            }
+            <p>© {new Date().getFullYear()} Hospital Oncológico de La Habana</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </body>
+</html>

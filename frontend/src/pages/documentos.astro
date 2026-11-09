@@ -1,0 +1,28 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { createDocumentsApi } from "@/features/documents/infrastructure/documents.api";
+import { DocumentsPage } from "@/features/documents/presentation/DocumentsPage";
+import { load, serverTransport } from "@/shared/api/server";
+
+// Solo con sesión (el middleware redirige a /login): ver y descargar. La gestión está en /admin/documentos.
+const documents = await load(() => createDocumentsApi(serverTransport(Astro.locals.token)).list());
+---
+
+<BaseLayout title="Repositorio de Documentos">
+  {
+    documents.error ? (
+      <>
+        <PageHeader title="Repositorio de Documentos" />
+        <Alert>Error al cargar los documentos: {documents.error}</Alert>
+      </>
+    ) : (
+      <DocumentsPage
+        client:load
+        initialItems={documents.data ?? []}
+        canManage={false}
+      />
+    )
+  }
+</BaseLayout>

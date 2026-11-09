@@ -1,0 +1,13 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createPublicationsApi } from "@/features/publications/infrastructure/publications.api";
+import { PublicationsManager } from "@/features/publications/presentation/PublicationsManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createPublicationsApi(serverTransport(Astro.locals.token)).list());
+---
+
+<AdminLayout title="Publicaciones">
+  {error ? <Alert>{error}</Alert> : <PublicationsManager client:load initialItems={data ?? []} />}
+</AdminLayout>

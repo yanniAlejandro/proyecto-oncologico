@@ -1,0 +1,167 @@
+---
+/**
+ * Panel de gestión: layout propio con barra lateral (referencia visual: shadcn «sidebar» blocks),
+ * con los colores y la fuente del hospital. En móvil la barra se abre como panel deslizante.
+ */
+import {
+  Activity,
+  ArrowLeft,
+  Building2,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Link,
+  LogOut,
+  MapPin,
+  Menu,
+  Newspaper,
+  PhoneCall,
+  Stethoscope,
+  Users,
+} from "lucide-react";
+import { HospitalLogo } from "@/components/site/HospitalLogo";
+import { adminNavFor } from "@/shared/auth/roles";
+import HeadCommon from "./HeadCommon.astro";
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+const { user } = Astro.locals;
+const path = Astro.url.pathname.replace(/\/$/, "") || "/";
+const icons = {
+  Activity,
+  Building2,
+  ClipboardList,
+  FileText,
+  LayoutDashboard,
+  Link,
+  MapPin,
+  Newspaper,
+  PhoneCall,
+  Stethoscope,
+  Users,
+};
+const items = adminNavFor(user);
+const groups = ["General", "Portal", "Contenido clínico", "Administración"] as const;
+const isActive = (href: string) => (href === "/admin" ? path === "/admin" : path === href || path.startsWith(`${href}/`));
+const current = items.find((i) => isActive(i.href));
+const roleLabel = user?.role === "administrador" ? "Administrador" : "Médico";
+const initials = (user?.full_name ?? "?")
+  .split(/\s+/)
+  .filter((w) => /^[A-ZÁÉÍÓÚÑ]/.test(w))
+  .slice(0, 2)
+  .map((w) => w[0])
+  .join("");
+---
+
+<!doctype html>
+<html lang="es" transition:animate="none">
+  <head>
+    <HeadCommon title={`${title} · Panel · Hospital Oncológico de La Habana`} description="Panel de gestión del portal" />
+  </head>
+  <body class="admin-body">
+    <a href="#contenido" class="skip-link">Saltar al contenido</a>
+    <div class="admin-shell" data-admin-shell>
+      <aside class="admin-sidebar" id="admin-sidebar" aria-label="Menú del panel">
+        <a href="/admin" class="admin-brand">
+          <HospitalLogo size={34} />
+          <div>
+            <strong>Panel de gestión</strong>
+            <span>Hospital Oncológico</span>
+          </div>
+        </a>
+
+        <nav class="admin-nav">
+          {
+            groups.map((group) => {
+              const entries = items.filter((i) => i.group === group);
+              return (
+                entries.length > 0 && (
+                  <div class="admin-nav-group">
+                    <span class="admin-nav-label">{group}</span>
+                    {entries.map((item) => {
+                      const Icon = icons[item.icon as keyof typeof icons];
+                      return (
+                        <a
+                          href={item.href}
+                          class:list={["admin-nav-item", { active: isActive(item.href) }]}
+                          aria-current={isActive(item.href) ? "page" : undefined}
+                        >
+                          <Icon size={17} aria-hidden="true" />
+                          {item.label}
+                        </a>
+                      );
+                    })}
+                  </div>
+                )
+              );
+            })
+          }
+        </nav>
+
+        <div class="admin-sidebar-footer">
+          <a href="/" class="admin-nav-item">
+            <ArrowLeft size={17} aria-hidden="true" />
+            Volver al portal
+          </a>
+          <div class="admin-user">
+            <span class="admin-avatar" aria-hidden="true">{initials}</span>
+            <div>
+              <strong>{user?.full_name}</strong>
+              <span>{roleLabel}</span>
+            </div>
+            <form method="post" action="/api/auth/logout" data-astro-reload>
+              <button type="submit" class="admin-icon-button" aria-label="Cerrar sesión" title="Cerrar sesión">
+                <LogOut size={17} aria-hidden="true" />
+              </button>
+            </form>
+          </div>
+        </div>
+      </aside>
+      <div class="admin-backdrop" data-admin-close></div>
+
+      <div class="admin-content">
+        <header class="admin-topbar">
+          <button
+            type="button"
+            class="admin-icon-button admin-menu-button"
+            aria-label="Abrir menú"
+            aria-controls="admin-sidebar"
+            aria-expanded="false"
+            data-admin-toggle
+          >
+            <Menu size={20} aria-hidden="true" />
+          </button>
+          <nav aria-label="Ruta" class="admin-breadcrumb">
+            <a href="/admin">Panel</a>
+            {current && current.href !== "/admin" && <span aria-hidden="true">/</span>}
+            {current && current.href !== "/admin" && <span aria-current="page">{current.label}</span>}
+          </nav>
+        </header>
+        <main id="contenido" class="admin-main">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <script>
+      // Menú lateral en móvil. Con <ClientRouter /> el script se vuelve a enlazar tras cada navegación.
+      function bind() {
+        const shell = document.querySelector<HTMLElement>("[data-admin-shell]");
+        const toggle = document.querySelector<HTMLButtonElement>("[data-admin-toggle]");
+        if (!shell || !toggle) return;
+        const set = (open: boolean) => {
+          shell.classList.toggle("sidebar-open", open);
+          toggle.setAttribute("aria-expanded", String(open));
+        };
+        toggle.addEventListener("click", () => set(!shell.classList.contains("sidebar-open")));
+        document.querySelector("[data-admin-close]")?.addEventListener("click", () => set(false));
+      }
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") document.querySelector("[data-admin-shell]")?.classList.remove("sidebar-open");
+      });
+      document.addEventListener("astro:page-load", bind);
+    </script>
+  </body>
+</html>

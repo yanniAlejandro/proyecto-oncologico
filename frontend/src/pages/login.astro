@@ -1,0 +1,38 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { HospitalLogo } from "@/components/site/HospitalLogo";
+import { LoginForm } from "@/features/auth/presentation/LoginForm";
+import { safeNext } from "@/shared/auth/roles";
+
+// Con sesión, el middleware ya redirige al destino. Aquí solo se valida `next` (sin redirecciones abiertas).
+const next = safeNext(Astro.url.searchParams.get("next"));
+const fromProtected = next !== "/";
+---
+
+<BaseLayout title="Iniciar sesión" description="Acceso del personal del Hospital Oncológico de La Habana">
+  <div class="login-page">
+    <section class="login-card" aria-labelledby="login-title">
+      <header class="login-card-header">
+        <HospitalLogo size={48} />
+        <div>
+          <h2 id="login-title">Acceso institucional</h2>
+          <p>Hospital Oncológico de La Habana</p>
+        </div>
+      </header>
+      <div class="login-card-body">
+        {
+          fromProtected && (
+            <p class="login-notice" role="status">
+              Inicia sesión para continuar. Esta sección es solo para el personal del hospital.
+            </p>
+          )
+        }
+        <LoginForm client:load next={next} />
+        <p class="login-help">
+          ¿No tienes cuenta? Las crea la administración del portal. Si eres paciente o familiar, consulta la{" "}
+          <a href="/linea-de-ayuda">línea de ayuda</a>.
+        </p>
+      </div>
+    </section>
+  </div>
+</BaseLayout>

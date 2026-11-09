@@ -1,0 +1,25 @@
+# Memoria local del proyecto (no se versiona)
+docs/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+backend/venv/
+backend/.venv/
+backend/.pgdata/
+backend/storage/
+.env
+!.env.example
+
+# Node
+node_modules/
+dist/
+.astro/
+
+# Editor / SO
+.DS_Store
+.vscode/
+.idea/

@@ -1,0 +1,121 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { createAboutApi } from "@/features/about/infrastructure/about.api";
+import { type ActivityItem, latestActivity, pendingDrafts } from "@/features/admin/summary";
+import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.api";
+import { createDiseasesApi } from "@/features/diseases/infrastructure/diseases.api";
+import { createDocumentsApi } from "@/features/documents/infrastructure/documents.api";
+import { createHelplineApi } from "@/features/helpline/infrastructure/helpline.api";
+import { createLinksApi } from "@/features/links/infrastructure/links.api";
+import { createPublicationsApi } from "@/features/publications/infrastructure/publications.api";
+import { createUsersApi } from "@/features/users/infrastructure/users.api";
+import { formatDate } from "@/lib/format";
+import { load, serverTransport } from "@/shared/api/server";
+import { adminNavFor, can, isAdmin } from "@/shared/auth/roles";
+
+const { user, token } = Astro.locals;
+const t = serverTransport(token);
+/** Carga solo si el usuario tiene acceso a esa sección. */
+const when = <T,>(allowed: boolean, fn: () => Promise<T>) =>
+  allowed ? load(fn) : Promise.resolve({ data: null as T | null, error: null as string | null });
+
+// Solo se consulta lo que el usuario puede gestionar.
+const [publications, about, helpline, links, guides, protocols, diseases, documents, users] = await Promise.all([
+  when(can(user, "publicaciones"), () => createPublicationsApi(t).list()),
+  when(can(user, "quienes_somos"), () => createAboutApi(t).list()),
+  when(can(user, "linea_ayuda"), () => createHelplineApi(t).get()),
+  when(can(user, "enlaces"), () => createLinksApi(t).listAll()),
+  when(can(user, "guias"), () => createClinicalApi(t, "guide").list()),
+  when(can(user, "protocolos"), () => createClinicalApi(t, "protocol").list()),
+  when(can(user, "enfermedades"), () => createDiseasesApi(t).list()),
+  when(can(user, "documentos"), () => createDocumentsApi(t).list()),
+  when(isAdmin(user), () => createUsersApi(t).list()),
+]);
+
+type Stat = { href: string; label: string; value: number; note?: string };
+const stats: Stat[] = [];
+const push = (href: string, label: string, value: number | undefined, note?: string) => {
+  if (value !== undefined && adminNavFor(user).some((i) => i.href === href)) stats.push({ href, label, value, note });
+};
+push("/admin/publicaciones", "Publicaciones", publications.data?.length);
+const drafts = about.data ? pendingDrafts(about.data.map((s) => s.body)) : 0;
+push("/admin/quienes-somos", "Apartados de «Quiénes somos»", about.data?.length, drafts ? `${drafts} pendientes de validar` : undefined);
+push(
+  "/admin/linea-ayuda",
+  "Profesionales en la línea de ayuda",
+  helpline.data?.professionals.length,
+  helpline.data ? (helpline.data.status.available_now ? "Línea disponible ahora" : "Línea fuera de horario") : undefined,
+);
+push("/admin/enlaces", "Enlaces de interés", links.data?.length, links.data ? `${links.data.filter((l) => !l.is_active).length} ocultos` : undefined);
+push("/admin/guias", "Guías de diagnóstico", guides.data?.length);
+push("/admin/protocolos", "Protocolos de tratamiento", protocols.data?.length);
+push("/admin/enfermedades", "Enfermedades", diseases.data?.length);
+push("/admin/documentos", "Documentos", documents.data?.length);
+const doctors = users.data?.filter((u) => u.role === "medico" && u.is_active) ?? [];
+push(
+  "/admin/usuarios",
+  "Médicos activos",
+  users.data ? doctors.length : undefined,
+  users.data ? `${doctors.filter((u) => u.permissions.length > 0).length} con permisos de gestión` : undefined,
+);
+
+const activity: ActivityItem[] = latestActivity([
+  (publications.data ?? []).map((p) => ({ kind: "Publicación", title: p.title, who: p.author_name, at: p.created_at, href: "/admin/publicaciones" })),
+  (documents.data ?? []).map((d) => ({ kind: "Documento", title: d.title, who: d.uploader_name, at: d.created_at, href: "/admin/documentos" })),
+  (guides.data ?? []).map((g) => ({ kind: "Guía", title: g.title, who: g.author_name, at: g.updated_at, href: "/admin/guias" })),
+  (protocols.data ?? []).map((p) => ({ kind: "Protocolo", title: p.title, who: p.author_name, at: p.updated_at, href: "/admin/protocolos" })),
+]);
+const errors = [publications, about, helpline, links, guides, protocols, diseases, documents, users]
+  .map((r) => r.error)
+  .filter(Boolean);
+const firstName = user?.full_name.split(" ").find((w) => !/^(dr|dra)\.?$/i.test(w)) ?? "";
+---
+
+<AdminLayout title="Resumen">
+  <PageHeader title={`Hola, ${firstName}`} subtitle="Resumen de lo que puedes gestionar en el portal" />
+  {errors.length > 0 && <Alert>Algunos datos no se pudieron cargar: {errors[0]}</Alert>}
+  {
+    helpline.data && !helpline.data.config.meets_minimum && (
+      <Alert>
+        El horario de la línea de ayuda no cubre las 6 horas diarias del estándar. <a href="/admin/linea-ayuda">Revisarlo</a>
+      </Alert>
+    )
+  }
+
+  <div class="stat-grid">
+    {
+      stats.map((s) => (
+        <a href={s.href} class="admin-stat">
+          <span>{s.label}</span>
+          <strong>{s.value}</strong>
+          {s.note && <small>{s.note}</small>}
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    activity.length > 0 && (
+      <>
+        <div class="section-heading">
+          <h3>Actividad reciente</h3>
+          <p>Últimas altas y modificaciones</p>
+        </div>
+        <ul class="activity-list">
+          {activity.map((a) => (
+            <li>
+              <span class="activity-kind">{a.kind}</span>
+              <a href={a.href}>
+                {a.title}
+                {a.who && <span class="muted"> · {a.who}</span>}
+              </a>
+              <time datetime={a.at}>{formatDate(a.at)}</time>
+            </li>
+          ))}
+        </ul>
+      </>
+    )
+  }
+</AdminLayout>

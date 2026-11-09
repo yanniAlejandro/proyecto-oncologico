@@ -1,0 +1,30 @@
+---
+import { formatDate, previewText } from "@/lib/format";
+import type { Publication } from "../domain/types";
+
+interface Props {
+  item: Publication;
+}
+const { item } = Astro.props;
+---
+
+<a href={item.url} target="_blank" rel="noreferrer" class="card publication-card">
+  {
+    item.image_url ? (
+      <img src={item.image_url} alt="" class="publication-image" loading="lazy" width="640" height="336" />
+    ) : (
+      <div class="publication-image publication-image-empty" aria-hidden="true">
+        {item.domain}
+      </div>
+    )
+  }
+  <div class="publication-body">
+    <span class="publication-domain">{item.domain}</span>
+    <h3>{item.title}</h3>
+    {item.description && <p class="content-preview">{previewText(item.description, 200)}</p>}
+    <footer>
+      <span class="card-date">{formatDate(item.created_at)}</span>
+      {item.author_name && <span class="card-author">{item.author_name}</span>}
+    </footer>
+  </div>
+</a>

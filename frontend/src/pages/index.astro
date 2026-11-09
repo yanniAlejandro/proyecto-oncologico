@@ -1,0 +1,58 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { RichText } from "@/components/site/RichText";
+import { Alert } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { createAboutApi } from "@/features/about/infrastructure/about.api";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { user, token } = Astro.locals;
+const { data, error } = await load(() => createAboutApi(serverTransport(token)).list());
+const sections = data ?? [];
+---
+
+<BaseLayout title="Quiénes somos">
+  <div class="landing-hero">
+    <div class="landing-hero-content">
+      <span class="landing-badge">Quiénes somos</span>
+      <h2>Hospital Oncológico de La Habana</h2>
+      <p>
+        Centro de Oncología y Radiobiología. Atención integral al paciente con cáncer y a su familia, desde la infancia
+        hasta la edad adulta.
+      </p>
+      {
+        !user && (
+          <a href="/login" class={buttonVariants({ size: "lg" })}>
+            Acceso para personal médico
+          </a>
+        )
+      }
+    </div>
+  </div>
+
+  {error && <Alert>No se pudo cargar la información del centro: {error}</Alert>}
+
+  {
+    sections.length > 0 && (
+      <nav class="about-index" aria-label="Apartados">
+        {sections.map((s) => (
+          <a href={`#${s.slug}`}>{s.title}</a>
+        ))}
+      </nav>
+    )
+  }
+
+  <div class="about-sections">
+    {
+      sections.map((s) => (
+        <section id={s.slug} class:list={["about-section", { "has-image": !!s.image_url }]}>
+          <div class="about-section-text">
+            <h2>{s.title}</h2>
+            <RichText text={s.body} />
+          </div>
+          {s.image_url && <img src={s.image_url} alt="" class="about-section-image" loading="lazy" />}
+        </section>
+      ))
+    }
+  </div>
+</BaseLayout>

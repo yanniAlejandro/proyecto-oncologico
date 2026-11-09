@@ -1,0 +1,53 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import { createContactApi } from "@/features/contact/infrastructure/contact.api";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createContactApi(serverTransport(Astro.locals.token)).get());
+const items = data
+  ? [
+      { icon: "📍", label: "Dirección", value: data.address },
+      { icon: "📞", label: "Teléfono", value: data.phone },
+      { icon: "✉️", label: "Correo electrónico", value: data.email, href: data.email ? `mailto:${data.email}` : null },
+      { icon: "🕐", label: "Horario de atención", value: data.schedule },
+    ].filter((i) => i.value)
+  : [];
+---
+
+<BaseLayout title="Contacto">
+  {
+    error || !data ? (
+      <Alert>No se pudo cargar la información de contacto.</Alert>
+    ) : (
+      <>
+        <PageHeader title="Contacto" subtitle="Información institucional y canales de comunicación del hospital" />
+        <div class="contact-card">
+          <h3>{data.organization_name}</h3>
+          <div class="contact-grid">
+            {items.map((item) => (
+              <div class="contact-item">
+                <span class="contact-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                <div>
+                  <strong>{item.label}</strong>
+                  {item.href ? <a href={item.href}>{item.value}</a> : <span>{item.value}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+          {data.map_url && (
+            <p style="margin-top: 1.25rem">
+              <a href={data.map_url} target="_blank" rel="noreferrer" class={buttonVariants()}>
+                Ver ubicación en mapa
+              </a>
+            </p>
+          )}
+        </div>
+      </>
+    )
+  }
+</BaseLayout>

@@ -1,0 +1,26 @@
+---
+import "@/styles/global.css";
+import sans400 from "@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?url";
+import sans500 from "@fontsource/source-sans-3/files/source-sans-3-latin-500-normal.woff2?url";
+import sans600 from "@fontsource/source-sans-3/files/source-sans-3-latin-600-normal.woff2?url";
+import sans700 from "@fontsource/source-sans-3/files/source-sans-3-latin-700-normal.woff2?url";
+import { ClientRouter } from "astro:transitions";
+
+interface Props {
+  title: string;
+  description: string;
+}
+const { title, description } = Astro.props;
+---
+
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content={description} />
+<link rel="icon" type="image/svg+xml" href="/logo-holh.svg" />
+<title>{title}</title>
+{
+  [sans400, sans500, sans600, sans700].map((href) => (
+    <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
+  ))
+}
+<ClientRouter fallback="swap" />

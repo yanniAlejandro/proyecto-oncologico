@@ -1,0 +1,28 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createHelplineApi } from "@/features/helpline/infrastructure/helpline.api";
+import { invalidateHelplineCache } from "@/features/helpline/infrastructure/helpline.server";
+import { HelplineManager } from "@/features/helpline/presentation/HelplineManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const api = createHelplineApi(serverTransport(Astro.locals.token));
+const [helpline, professionals] = await Promise.all([load(api.get), load(api.listProfessionals)]);
+const error = helpline.error ?? professionals.error;
+// Quien entra a gestionar verá la cabecera al día en la siguiente navegación.
+invalidateHelplineCache();
+---
+
+<AdminLayout title="Línea de ayuda">
+  {
+    error || !helpline.data ? (
+      <Alert>{error}</Alert>
+    ) : (
+      <HelplineManager
+        client:load
+        initialConfig={helpline.data.config}
+        initialProfessionals={professionals.data ?? []}
+      />
+    )
+  }
+</AdminLayout>

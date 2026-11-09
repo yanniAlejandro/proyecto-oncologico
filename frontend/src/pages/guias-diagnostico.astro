@@ -1,0 +1,24 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import { PageHeader } from "@/components/site/PageHeader";
+import { Alert } from "@/components/ui/alert";
+import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.api";
+import { ClinicalDocsPage } from "@/features/clinical/presentation/ClinicalDocsPage";
+import { load, serverTransport } from "@/shared/api/server";
+
+// Solo con sesión: sin ella, el middleware redirige a /login?next=/guias-diagnostico.
+const docs = await load(() => createClinicalApi(serverTransport(Astro.locals.token), "guide").list());
+---
+
+<BaseLayout title="Guías de Diagnóstico">
+  {
+    docs.error ? (
+      <>
+        <PageHeader title="Guías de Diagnóstico" />
+        <Alert>Error al cargar las guías: {docs.error}</Alert>
+      </>
+    ) : (
+      <ClinicalDocsPage client:load kind="guide" initialItems={docs.data ?? []} diseases={[]} canManage={false} />
+    )
+  }
+</BaseLayout>
