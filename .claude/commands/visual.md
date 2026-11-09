@@ -18,6 +18,6 @@ Captura las pantallas del portal (8 rutas) y del panel (`/admin`, publicaciones,
 4. Diferencias **esperadas** (no son regresiones):
    - Indicador de la línea de ayuda (cabecera, pie, `07-linea-ayuda`, resumen del panel): depende de la hora de La Habana («Disponible ahora» / «Fuera de horario»).
    - Datos que cambian con el uso: publicaciones, documentos y actividad reciente del panel (`09-panel-resumen`).
-   - Rutas sin permiso: el fichero lleva `__redirect_` (visitante y médico en `/admin/*`, editora en `/admin/usuarios`). Si una de estas desaparece o aparece otra, **es un cambio de permisos**: revisarlo.
+   - Rutas sin permiso: el fichero lleva `__redirect_` (visitante → `_login` en guías, protocolos, documentos y `/admin/*`; médico en `/admin/*` y editora en `/admin/usuarios` → portada; `12-login` con sesión → redirige). Si una de estas desaparece o aparece otra, **es un cambio de permisos**: revisarlo.
    - ≤2 % en general: antialiasing.
 5. Para cualquier otra diferencia, abre la captura y su `*.diff.png` y explica la causa. No corrijas nada en este comando: propón el arreglo y espera.

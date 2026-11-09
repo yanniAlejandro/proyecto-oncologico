@@ -2,13 +2,14 @@ import { createHash } from "node:crypto";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { expect, test } from "@playwright/test";
-import { login, logout, sidebar } from "./helpers";
+import { login, logout, sidebar, submitLogin } from "./helpers";
 
 /**
  * Flujo completo del repositorio de documentos respetando permisos:
+ * el visitante no ve la pestaña y /documentos le lleva al login (y de vuelta tras entrar) →
  * una médica con permiso «documentos» sube un PDF desde el panel → queda en STORAGE_DIR →
- * cualquiera lo ve y lo descarga idéntico en /documentos (solo lectura) →
- * un médico sin permisos no puede gestionar → al eliminarlo desaparece del disco.
+ * un médico sin permisos lo ve y lo descarga idéntico en /documentos, pero no puede gestionar →
+ * al eliminarlo desaparece del disco.
  */
 
 const FIXTURE = path.join(import.meta.dirname, "fixtures/protocolo-prueba-e2e.pdf");
@@ -35,14 +36,20 @@ test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, test
   const row = page.getByRole("row").filter({ hasText: TITLE });
   let storedPath: string | null = null;
 
-  await test.step("visitante: ve el repositorio pero no puede subir", async () => {
+  await test.step("visitante: no ve la pestaña y la URL le lleva al login", async () => {
+    await page.goto("/");
+    const nav = page.getByRole("navigation", { name: "Navegación principal" });
+    await expect(nav.getByRole("link", { name: "Documentos" })).toHaveCount(0);
+    await expect(nav.getByRole("link", { name: "Guías de Diagnóstico" })).toHaveCount(0);
     await page.goto("/documentos");
-    await expect(page.getByRole("heading", { name: "Repositorio de Documentos" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "+ Nuevo documento" })).toHaveCount(0);
+    await expect(page).toHaveURL(/\/login\?next=%2Fdocumentos$/);
   });
 
-  await test.step("médico sin permisos: no tiene panel ni puede entrar", async () => {
-    await login(page, "medico");
+  await test.step("médico sin permisos: entra y vuelve a Documentos, pero no puede gestionar", async () => {
+    await submitLogin(page, "medico");
+    await expect(page).toHaveURL(/\/documentos$/);
+    await expect(page.getByRole("heading", { name: "Repositorio de Documentos" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "+ Nuevo documento" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "Panel de gestión" })).toHaveCount(0);
     await page.goto("/admin/documentos");
     await expect(page).toHaveURL(/\/$/);
@@ -110,8 +117,9 @@ test("subir, almacenar, ver, descargar y eliminar un PDF", async ({ page }, test
     expect(sha256(await fs.readFile((await download.path())!))).toBe(originalHash);
   });
 
-  await test.step("visitante: lo ve y descarga en la página pública, pero no puede eliminar", async () => {
+  await test.step("médico sin permisos: lo ve en /documentos, pero no puede eliminar", async () => {
     await logout(page);
+    await login(page, "medico");
     await page.goto("/documentos");
     await expect(row).toBeVisible();
     await expect(row.getByRole("button", { name: `Ver ${TITLE}` })).toBeVisible();

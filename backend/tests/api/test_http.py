@@ -33,7 +33,7 @@ MATRIX = [
     ("POST", "/api/v1/publications/preview", {"url": "https://desconocida.cu"}, [401, 403, 200, 200]),
     ("GET", "/api/v1/diagnostic-guides", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/treatment-protocols", None, [401, 200, 200, 200]),
-    ("GET", "/api/v1/documents", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/documents", None, [401, 200, 200, 200]),
     ("GET", "/api/v1/users", None, [401, 403, 403, 200]),
     ("POST", "/api/v1/diseases", {"name": "Linfoma"}, [401, 403, 201, 409]),
     ("PUT", "/api/v1/contact", {"phone": "1"}, [401, 403, 403, 200]),
@@ -88,22 +88,24 @@ def test_document_upload_view_download_delete(world: World):
     doc = r.json()
     assert doc["file_name"] == "Informe é.pdf" and doc["has_file"] and doc["is_previewable"]
 
-    # Visitante: ver en el navegador y descargar.
-    view = c.get(f"/api/v1/documents/{doc['id']}/file", params={"disposition": "inline"})
+    # Sin sesión no hay acceso; un médico sin permisos ve en el navegador y descarga.
+    assert c.get(f"/api/v1/documents/{doc['id']}/file").status_code == 401
+    m = world.as_("medico")
+    view = c.get(f"/api/v1/documents/{doc['id']}/file", params={"disposition": "inline"}, headers=m)
     assert view.status_code == 200 and view.content == PDF
     assert view.headers["content-type"] == "application/pdf"
     assert view.headers["content-disposition"].startswith("inline;")
     assert view.headers["x-content-type-options"] == "nosniff"
-    head = c.head(f"/api/v1/documents/{doc['id']}/file", params={"disposition": "inline"})
+    head = c.head(f"/api/v1/documents/{doc['id']}/file", params={"disposition": "inline"}, headers=m)
     assert head.status_code == 200 and head.content == b""  # el visor comprueba antes de incrustar
-    down = c.get(f"/api/v1/documents/{doc['id']}/file")
+    down = c.get(f"/api/v1/documents/{doc['id']}/file", headers=m)
     assert down.headers["content-disposition"].startswith("attachment;")
     assert "Informe%20%C3%A9.pdf" in down.headers["content-disposition"]
 
     assert c.delete(f"/api/v1/documents/{doc['id']}", headers=world.as_("medico")).status_code == 403
     assert c.delete(f"/api/v1/documents/{doc['id']}", headers=h).status_code == 204
-    assert c.get(f"/api/v1/documents/{doc['id']}/file").status_code == 404
-    assert c.head(f"/api/v1/documents/{doc['id']}/file").status_code == 404
+    assert c.get(f"/api/v1/documents/{doc['id']}/file", headers=m).status_code == 404
+    assert c.head(f"/api/v1/documents/{doc['id']}/file", headers=m).status_code == 404
     assert world.storage.files == {}
 
 
@@ -134,7 +136,7 @@ def test_document_external_link_and_policy(world: World):
     c, h = world.client, world.as_("editor")
     r = c.post("/api/v1/documents", data={"title": "Manual OMS", "file_url": "https://who.int/m.pdf"}, headers=h)
     assert r.status_code == 201 and r.json()["has_file"] is False and r.json()["file_url"]
-    assert c.get(f"/api/v1/documents/{r.json()['id']}/file").status_code == 404
+    assert c.get(f"/api/v1/documents/{r.json()['id']}/file", headers=h).status_code == 404
     policy = c.get("/api/v1/documents/upload-policy").json()
     assert ".pdf" in policy["allowed_extensions"] and policy["max_bytes"] == MAX_UPLOAD
 

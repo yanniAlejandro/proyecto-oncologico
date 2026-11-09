@@ -69,8 +69,8 @@ class UploadPolicyOut(BaseModel):
 
 
 @router.get("", response_model=list[DocumentOut])
-async def list_documents(repo: Repo, search: str | None = Query(None)):
-    return [DocumentOut.of(d) for d in await uc.ListDocuments(repo)(search)]
+async def list_documents(repo: Repo, actor: CurrentActor, search: str | None = Query(None)):
+    return [DocumentOut.of(d) for d in unwrap(await uc.ListDocuments(repo)(actor, search))]
 
 
 @router.get("/upload-policy", response_model=UploadPolicyOut)
@@ -104,9 +104,13 @@ async def create_document(
 
 @router.api_route("/{document_id}/file", methods=["GET", "HEAD"])
 async def get_document_file(
-    document_id: UUID, repo: Repo, storage: Storage, disposition: Disposition = Query(Disposition.ATTACHMENT)
+    document_id: UUID,
+    repo: Repo,
+    storage: Storage,
+    actor: CurrentActor,
+    disposition: Disposition = Query(Disposition.ATTACHMENT),
 ):
-    served = unwrap(await uc.GetDocumentFile(repo, storage)(document_id, disposition))
+    served = unwrap(await uc.GetDocumentFile(repo, storage)(actor, document_id, disposition))
     return FileResponse(
         served.path,
         media_type=served.media_type,

@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { isRouteAllowed, LEGACY_REDIRECTS, type SessionUser } from "@/shared/auth/roles";
+import { canUsePanel, LEGACY_REDIRECTS, loginHref, routeDecision, safeNext, type SessionUser } from "@/shared/auth/roles";
 import { clearSessionToken, readSessionToken } from "@/shared/auth/session";
 import { serverTransport } from "@/shared/api/server";
 import { ApiError } from "@/shared/api/transport";
@@ -33,10 +33,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const legacy = LEGACY_REDIRECTS[context.url.pathname.replace(/\/$/, "")];
   if (legacy) return context.redirect(legacy, 301);
 
-  if (!isRouteAllowed(context.url.pathname, context.locals.user)) {
-    // Sin sesión → portada (con el acceso); con sesión pero sin permiso → panel o portada.
-    return context.redirect("/", 302);
-  }
+  const { pathname, search } = context.url;
+  const user = context.locals.user;
+
+  // Con sesión, /login no tiene sentido: directo al destino.
+  if (pathname === "/login" && user) return context.redirect(safeNext(context.url.searchParams.get("next")), 302);
+
+  const decision = routeDecision(pathname, user);
+  if (decision === "login") return context.redirect(loginHref(pathname + search), 302);
+  if (decision === "forbidden") return context.redirect(canUsePanel(user) && pathname !== "/admin" ? "/admin" : "/", 302);
 
   const response = await next();
   // Las páginas dependen de la sesión: que ningún intermediario las cachee.

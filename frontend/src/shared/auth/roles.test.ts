@@ -1,4 +1,4 @@
-import { adminNavFor, can, canReadClinical, canUsePanel, isAdmin, isRouteAllowed } from "./roles";
+import { adminNavFor, can, canReadClinical, canUsePanel, isAdmin, isRouteAllowed, loginHref, routeDecision, safeNext } from "./roles";
 
 const admin = { role: "administrador" as const, permissions: [] };
 const editor = { role: "medico" as const, permissions: ["publicaciones" as const, "documentos" as const] };
@@ -39,6 +39,42 @@ describe("permisos (espejo del backend)", () => {
     expect(isRouteAllowed("/admin", doctor)).toBe(false);
     expect(isRouteAllowed("/admin/", null)).toBe(false);
     expect(isRouteAllowed("/administracion", null)).toBe(true); // no es prefijo de ruta
-    expect(isRouteAllowed("/documentos", null)).toBe(true);
+    expect(isRouteAllowed("/enlaces", null)).toBe(true);
+  });
+
+  it("sin sesión pide login; con sesión sin permiso es «forbidden»", () => {
+    expect(routeDecision("/admin/usuarios", null)).toBe("login");
+    expect(routeDecision("/admin/usuarios", editor)).toBe("forbidden");
+    expect(routeDecision("/admin", doctor)).toBe("forbidden");
+    expect(routeDecision("/", null)).toBe("allow");
+  });
+
+  it("guías, protocolos y documentos exigen sesión", () => {
+    for (const path of ["/guias-diagnostico", "/protocolos-tratamiento", "/documentos"]) {
+      expect(routeDecision(path, null)).toBe("login");
+      expect(routeDecision(path, doctor)).toBe("allow");
+    }
+    expect(routeDecision("/publicaciones", null)).toBe("allow");
+  });
+});
+
+describe("destino tras el login", () => {
+  it.each([
+    ["/admin/usuarios?x=1", "/admin/usuarios?x=1"],
+    ["/documentos", "/documentos"],
+    ["https://evil.com", "/"],
+    ["//evil.com", "/"],
+    ["/\\evil.com", "/"],
+    ["/admin\\..", "/"],
+    ["/login?next=/admin", "/"],
+    ["/api/v1/users", "/"],
+    [null, "/"],
+  ])("%s → %s", (next, expected) => {
+    expect(safeNext(next)).toBe(expected);
+  });
+
+  it("construye el enlace al login con la ruta de vuelta", () => {
+    expect(loginHref("/admin/guias")).toBe("/login?next=%2Fadmin%2Fguias");
+    expect(loginHref("/")).toBe("/login");
   });
 });

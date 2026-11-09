@@ -9,7 +9,7 @@ from app.features.documents.domain.model import (
     FileToServe,
     NewDocument,
 )
-from app.shared.domain.actor import Actor, Section, require_section
+from app.shared.domain.actor import Actor, Section, require_section, require_user
 from app.shared.domain.result import AppError, Err, Ok, Result
 from app.shared.domain.storage import FileStorage
 
@@ -17,13 +17,15 @@ NOT_FOUND = "Documento no encontrado"
 
 
 class ListDocuments:
-    """El repositorio es público: cualquiera lista, ve y descarga."""
+    """Cualquier usuario con sesión lista, ve y descarga; gestionar requiere «documentos»."""
 
     def __init__(self, documents: DocumentRepository) -> None:
         self._documents = documents
 
-    async def __call__(self, search: str | None = None) -> list[Document]:
-        return await self._documents.list(search.strip() or None if search else None)
+    async def __call__(self, actor: Actor | None, search: str | None = None) -> Result[list[Document]]:
+        if isinstance(auth := require_user(actor), Err):
+            return auth
+        return Ok(await self._documents.list(search.strip() or None if search else None))
 
 
 class UploadDocument:
@@ -94,7 +96,9 @@ class GetDocumentFile:
         self._documents = documents
         self._storage = storage
 
-    async def __call__(self, doc_id: UUID, disposition: Disposition) -> Result[FileToServe]:
+    async def __call__(self, actor: Actor | None, doc_id: UUID, disposition: Disposition) -> Result[FileToServe]:
+        if isinstance(auth := require_user(actor), Err):
+            return auth
         doc = await self._documents.get(doc_id)
         if doc is None:
             return Err(AppError.not_found(NOT_FOUND))

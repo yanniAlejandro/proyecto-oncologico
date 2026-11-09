@@ -59,7 +59,7 @@ app/
 
 Reglas:
 - `domain` no importa frameworks. `presentation` solo llama casos de uso, nunca repositorios para lógica.
-- **Los permisos se comprueban en el caso de uso**, no en el router: `require_section(actor, Section.X)` para gestionar, `require_admin` (usuarios, contacto), `require_user` (leer guías y protocolos). Así se testean sin HTTP.
+- **Los permisos se comprueban en el caso de uso**, no en el router: `require_section(actor, Section.X)` para gestionar, `require_admin` (usuarios, contacto), `require_user` (leer guías, protocolos y documentos). Así se testean sin HTTP.
 - Nueva sección gestionable → añadir a `Section` (backend) y a `SECTIONS`/`SECTION_LABELS`/`ADMIN_NAV` (frontend, `shared/auth/roles.ts`). `user_permissions.section` es texto: no requiere migración.
 - Descargas de URLs de usuarios (vista previa de publicaciones): siempre por `HttpLinkPreviewer` (protección SSRF). Nunca `httpx.get(url)` directo.
 - Fallos esperados → `Err(AppError.xxx(...))`; excepciones solo para bugs. El router hace `unwrap(...)`.
@@ -87,6 +87,7 @@ src/
 Reglas:
 - **Sesión**: el JWT vive en cookie httpOnly `holh_session`; el navegador nunca lo ve. Las islas llaman a `/api/v1/*` (proxy de Astro), que añade `Authorization`.
 - Permisos de UI con `shared/auth/roles.ts` (espejo de `app/shared/domain/actor.py`): `can(user, section)`, `isAdmin`, `canUsePanel`. El backend es la autoridad: la UI solo oculta.
+- Login en `/login?next=…` (sin modal). Rutas que exigen sesión: `MEMBER_ROUTES` + panel; el middleware usa `routeDecision` («login» → `/login?next=`, «forbidden» → panel o portada). `next` siempre por `safeNext` (sin redirecciones abiertas).
 - Las páginas públicas **no** gestionan nada. Toda la gestión vive en `/admin/*`; cada pantalla del panel se declara en `ADMIN_NAV` (ruta, grupo, icono y requisito), que alimenta la barra lateral y las guardas del middleware.
 - Textos editables con formato: `components/site/RichText.tsx` (sin HTML). Nunca `set:html` con contenido de usuarios.
 - `.astro` para lo estático; `.tsx` solo para islas interactivas (`client:load`).
@@ -96,8 +97,8 @@ Reglas:
 
 | Rol | Puede |
 |---|---|
-| Visitante | Portal público: quiénes somos, publicaciones, documentos (ver/descargar), enlaces, línea de ayuda, contacto |
-| Médico | + guías y protocolos (lectura). Por defecto solo lee; gestiona (CRUD completo) las secciones que le conceda un admin |
+| Visitante | Quiénes somos, publicaciones, enlaces, línea de ayuda, contacto (y `/login`) |
+| Médico | + guías, protocolos y documentos (lectura; ocultos en el menú sin sesión). Por defecto solo lee; gestiona (CRUD completo) las secciones que le conceda un admin |
 | Administrador | Todo + contacto + usuarios y permisos (también otros admins). Salvaguardas: no auto-desactivarse/degradarse, nunca 0 admins |
 
 ## Design Constraints

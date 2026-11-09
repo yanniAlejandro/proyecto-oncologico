@@ -4,7 +4,7 @@ import { HospitalLogo } from "@/components/site/HospitalLogo";
 import { summarizeSlots, telHref } from "@/features/helpline/domain/types";
 import { getHelplineCached } from "@/features/helpline/infrastructure/helpline.server";
 import HelplineStatus from "@/features/helpline/presentation/HelplineStatus.astro";
-import { canUsePanel } from "@/shared/auth/roles";
+import { canUsePanel, loginHref, MEMBER_ROUTES } from "@/shared/auth/roles";
 
 interface Props {
   title?: string;
@@ -26,7 +26,7 @@ const navItems = [
   { href: "/enlaces", label: "Enlaces" },
   { href: "/linea-de-ayuda", label: "Línea de ayuda" },
   { href: "/contacto", label: "Contacto" },
-];
+].filter((item) => user || !MEMBER_ROUTES.includes(item.href)); // guías, protocolos y documentos: solo con sesión
 const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 const roleLabel = user?.role === "medico" ? "médico" : user?.role;
 ---
@@ -87,7 +87,9 @@ const roleLabel = user?.role === "medico" ? "médico" : user?.role;
                     </form>
                   </>
                 ) : (
-                  <span class="guest-badge">Acceso público</span>
+                  <a href={loginHref(path === "/login" ? "/" : path + Astro.url.search)} class="login-link">
+                    Iniciar sesión
+                  </a>
                 )
               }
             </div>

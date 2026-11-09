@@ -2,46 +2,23 @@
 import BaseLayout from "@/layouts/BaseLayout.astro";
 import { PageHeader } from "@/components/site/PageHeader";
 import { Alert } from "@/components/ui/alert";
-import { LoginDialog } from "@/features/auth/presentation/LoginDialog";
 import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.api";
 import { ClinicalDocsPage } from "@/features/clinical/presentation/ClinicalDocsPage";
 import { load, serverTransport } from "@/shared/api/server";
-import { canReadClinical } from "@/shared/auth/roles";
 
-const { user, token } = Astro.locals;
-const canRead = canReadClinical(user);
-const t = serverTransport(token);
-const guides = canRead ? await load(() => createClinicalApi(t, "guide").list()) : null;
+// Solo con sesión: sin ella, el middleware redirige a /login?next=/guias-diagnostico.
+const docs = await load(() => createClinicalApi(serverTransport(Astro.locals.token), "guide").list());
 ---
 
 <BaseLayout title="Guías de Diagnóstico">
   {
-    !user ? (
-      <>
-        <PageHeader title="Guías de Diagnóstico" subtitle="Acceso restringido al personal autorizado" />
-        <div class="access-notice">
-          <p>Debes iniciar sesión como médico o administrador del Hospital Oncológico de La Habana.</p>
-          <LoginDialog client:load triggerLabel="Iniciar sesión" />
-        </div>
-      </>
-    ) : !canRead ? (
+    docs.error ? (
       <>
         <PageHeader title="Guías de Diagnóstico" />
-        <Alert>Tu rol no tiene permisos para ver las guías de diagnóstico.</Alert>
-      </>
-    ) : guides?.error ? (
-      <>
-        <PageHeader title="Guías de Diagnóstico" />
-        <Alert>Error al cargar las guías: {guides.error}</Alert>
+        <Alert>Error al cargar las guías: {docs.error}</Alert>
       </>
     ) : (
-      <ClinicalDocsPage
-        client:load
-        kind="guide"
-        initialItems={guides?.data ?? []}
-        diseases={[]}
-        canManage={false}
-      />
+      <ClinicalDocsPage client:load kind="guide" initialItems={docs.data ?? []} diseases={[]} canManage={false} />
     )
   }
 </BaseLayout>

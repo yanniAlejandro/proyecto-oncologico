@@ -6,7 +6,7 @@ import { createDocumentsApi } from "@/features/documents/infrastructure/document
 import { DocumentsPage } from "@/features/documents/presentation/DocumentsPage";
 import { load, serverTransport } from "@/shared/api/server";
 
-// Vista pública de solo lectura (ver y descargar). La gestión está en /admin/documentos.
+// Solo con sesión (el middleware redirige a /login): ver y descargar. La gestión está en /admin/documentos.
 const documents = await load(() => createDocumentsApi(serverTransport(Astro.locals.token)).list());
 ---
 

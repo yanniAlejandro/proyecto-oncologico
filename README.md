@@ -10,15 +10,16 @@ Monorepo con dos partes independientes:
 
 ## Vistas, roles y permisos
 
-**Portal público** (solo consulta: no hay botones de gestión):
+**Portal** (solo consulta: no hay botones de gestión). Guías, Protocolos y Documentos no aparecen en el menú sin sesión; sus URLs y las del panel llevan a `/login?next=…`:
 
 | Vista | Ruta | Acceso |
 |---|---|---|
-| Quiénes somos (portada) | `/` | Público. Login desde aquí |
+| Quiénes somos (portada) | `/` | Público |
+| Iniciar sesión | `/login?next=<ruta>` | Público. Tras entrar vuelve a `next` (solo rutas internas) |
 | Publicaciones | `/publicaciones` | Público |
 | Guías de diagnóstico | `/guias-diagnostico` | Con sesión (médico o admin) |
 | Protocolos de tratamiento | `/protocolos-tratamiento` | Con sesión (médico o admin) |
-| Documentos | `/documentos` | Público: ver y descargar |
+| Documentos | `/documentos` | Con sesión: ver y descargar |
 | Enlaces de interés | `/enlaces` | Público |
 | Línea de ayuda | `/linea-de-ayuda` | Público (y en la cabecera y el pie de todas las páginas) |
 | Contacto | `/contacto` | Público |
@@ -27,8 +28,8 @@ Monorepo con dos partes independientes:
 
 | Rol | Puede |
 |---|---|
-| Visitante | Ver el portal público |
-| Médico | Por defecto, **solo ver y descargar** (incluidas guías y protocolos). Gestiona (CRUD completo, también lo de otros) **solo las secciones que un administrador le conceda**: publicaciones, guías, protocolos, enfermedades, documentos, enlaces, quiénes somos, línea de ayuda |
+| Visitante | Quiénes somos, publicaciones, enlaces, línea de ayuda y contacto |
+| Médico | Por defecto, **solo ver y descargar** (incluidas guías, protocolos y documentos). Gestiona (CRUD completo, también lo de otros) **solo las secciones que un administrador le conceda**: publicaciones, guías, protocolos, enfermedades, documentos, enlaces, quiénes somos, línea de ayuda |
 | Administrador | Todo, incluidos contacto y **usuarios y permisos** (crear médicos y administradores, conceder permisos, desactivar/reactivar, cambiar contraseñas) |
 
 Salvaguardas: nadie se desactiva ni se quita el rol de administrador a sí mismo, y siempre queda al menos un administrador activo. Los permisos se leen de la BD en cada petición: conceder o retirar uno tiene efecto inmediato. Las guardas se aplican en el servidor (middleware de Astro) y cada endpoint de la API vuelve a comprobar el permiso.
@@ -102,7 +103,7 @@ Portada en apartados ordenados (título, texto con formato básico —párrafos,
 
 1. Quien tenga el permiso «documentos» sube desde el panel (`/admin/documentos`) (arrastrar o seleccionar). El navegador valida formato y tamaño, y FastAPI **vuelve a validar**: rol, nombre saneado, lista blanca de formatos, que el contenido corresponda a la extensión y tamaño máximo (`MAX_UPLOAD_MB`, 25 MB).
 2. El archivo se guarda en `STORAGE_DIR/<2 primeros>/<uuid>.<ext>` (escritura atómica, permisos 600). En la BD quedan título, nombre original, tipo, tamaño y la clave de almacenamiento. Si falla la BD, el archivo se borra.
-3. Cualquiera ve (`?disposition=inline`, solo PDF, imágenes y TXT) o descarga (`attachment`) desde `GET /documents/{id}/file`. Al eliminar se borran la fila y el archivo.
+3. Cualquier usuario con sesión ve (`?disposition=inline`, solo PDF, imágenes y TXT) o descarga (`attachment`) desde `GET /documents/{id}/file`. Al eliminar se borran la fila y el archivo.
 
 El almacenamiento está detrás de una interfaz (`FileStorage`): hoy es disco local, y se puede cambiar por NFS o MinIO/S3 sin tocar la lógica.
 

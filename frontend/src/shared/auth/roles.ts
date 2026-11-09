@@ -81,13 +81,39 @@ export const adminNavFor = (user: MaybeUser) => ADMIN_NAV.filter((item) => meets
 
 const matches = (pathname: string, prefix: string) => pathname === prefix || pathname.startsWith(`${prefix}/`);
 
-/** Rutas protegidas (lo aplica src/middleware.ts en el servidor). La más específica gana. */
-export function isRouteAllowed(pathname: string, user: MaybeUser): boolean {
-  const rule = [...ADMIN_NAV]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => matches(pathname, item.href));
-  return rule ? meets(user, rule.requires) : true;
+/** Páginas del portal que exigen sesión (ocultas en el menú para visitantes). */
+export const MEMBER_ROUTES = ["/guias-diagnostico", "/protocolos-tratamiento", "/documentos"];
+
+export type RouteDecision = "allow" | "login" | "forbidden";
+
+/**
+ * Qué hacer con una ruta (lo aplica src/middleware.ts en el servidor):
+ *  · "login": hace falta iniciar sesión → /login?next=…
+ *  · "forbidden": hay sesión pero no permiso → panel o portada.
+ * En el panel, la regla más específica gana.
+ */
+export function routeDecision(pathname: string, user: MaybeUser): RouteDecision {
+  if (MEMBER_ROUTES.some((r) => matches(pathname, r))) return user ? "allow" : "login";
+  const rule = [...ADMIN_NAV].sort((a, b) => b.href.length - a.href.length).find((item) => matches(pathname, item.href));
+  if (!rule || meets(user, rule.requires)) return "allow";
+  return user ? "forbidden" : "login";
 }
+
+export const isRouteAllowed = (pathname: string, user: MaybeUser) => routeDecision(pathname, user) === "allow";
+
+/**
+ * Destino tras el login: solo rutas internas (evita redirecciones abiertas a otros dominios).
+ * Rechaza «//evil.com», «/\\evil.com», URLs absolutas, /login y la API.
+ */
+export function safeNext(next: string | null | undefined, fallback = "/"): string {
+  if (!next || !next.startsWith("/") || next.startsWith("//") || next.startsWith("/\\")) return fallback;
+  if (/[\u0000-\u001f\\]/.test(next)) return fallback;
+  if (matches(next.split(/[?#]/)[0], "/login") || next.startsWith("/api/")) return fallback;
+  return next;
+}
+
+/** /login?next=<ruta actual> */
+export const loginHref = (next: string) => (next && next !== "/" ? `/login?next=${encodeURIComponent(next)}` : "/login");
 
 /** Rutas antiguas de gestión → panel. */
 export const LEGACY_REDIRECTS: Record<string, string> = {

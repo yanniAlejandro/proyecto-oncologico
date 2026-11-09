@@ -41,16 +41,16 @@ const ROUTES = [
   ["09-panel-resumen", "/admin"],
   ["10-panel-publicaciones", "/admin/publicaciones"],
   ["11-panel-usuarios", "/admin/usuarios"],
+  ["12-login", "/login?next=%2Fadmin"],
 ];
 const MODALS = [
-  ["visitante", "m01-login", "/", "Acceso para personal médico"],
   ["medico", "m02-guia-leer", "/guias-diagnostico", "Leer"],
   ["editora", "m03-publicacion-nueva", "/admin/publicaciones", "+ Nueva publicación"],
   ["editora", "m04-documento-nuevo", "/admin/documentos", "+ Nuevo documento"],
   ["admin", "m05-guia-nueva", "/admin/guias", "+ Nueva guía"],
   ["admin", "m06-protocolo-editar", "/admin/protocolos", "Editar"],
   ["admin", "m07-usuario-editar", "/admin/usuarios", "Editar"],
-  ["visitante", "m08-documento-visor", "/documentos", /^Ver /],
+  ["medico", "m08-documento-visor", "/documentos", /^Ver /],
 ];
 const VIEWPORTS = { desktop: { width: 1440, height: 900 }, mobile: { width: 390, height: 844 } };
 
@@ -110,7 +110,8 @@ for (const [role, creds] of Object.entries(USERS)) {
       await page.goto(args.base + route);
       await settle(page);
       const finalPath = new URL(page.url()).pathname;
-      const suffix = finalPath !== route ? `__redirect${finalPath.replaceAll("/", "_")}` : "";
+      const routePath = new URL(route, args.base).pathname;
+      const suffix = finalPath !== routePath ? `__redirect${finalPath.replaceAll("/", "_")}` : "";
       const file = `${name}${suffix}.png`;
       await page.screenshot({ path: path.join(dir, file), fullPage: true });
       captured.push(path.join(vpName, role, file));

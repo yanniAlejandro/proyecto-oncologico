@@ -122,7 +122,7 @@ async def test_external_link_documents(repo):
 
 async def test_anyone_can_view_previewable_inline(repo, storage):
     doc = ok(await upload(repo, storage))
-    served = ok(await uc.GetDocumentFile(repo, storage)(doc.id, Disposition.INLINE))
+    served = ok(await uc.GetDocumentFile(repo, storage)(DOCTOR, doc.id, Disposition.INLINE))
     assert served.disposition is Disposition.INLINE
     assert served.media_type == "application/pdf"
     assert served.path.read_bytes() == PDF
@@ -130,17 +130,17 @@ async def test_anyone_can_view_previewable_inline(repo, storage):
 
 async def test_non_previewable_is_forced_to_download(repo, storage):
     doc = ok(await upload(repo, storage, filename="checklist.docx", data=DOCX))
-    served = ok(await uc.GetDocumentFile(repo, storage)(doc.id, Disposition.INLINE))
+    served = ok(await uc.GetDocumentFile(repo, storage)(DOCTOR, doc.id, Disposition.INLINE))
     assert served.disposition is Disposition.ATTACHMENT
 
 
 async def test_file_errors(repo, storage):
-    err(await uc.GetDocumentFile(repo, storage)(uuid4(), Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
+    err(await uc.GetDocumentFile(repo, storage)(DOCTOR, uuid4(), Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
     link = ok(await uc.AddDocumentLink(repo)(ADMIN, title="x", description=None, url="https://a.cu/b.pdf"))
-    err(await uc.GetDocumentFile(repo, storage)(link.id, Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
+    err(await uc.GetDocumentFile(repo, storage)(DOCTOR, link.id, Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
     doc = ok(await upload(repo, storage))
     storage.files.clear()  # fichero perdido en disco
-    err(await uc.GetDocumentFile(repo, storage)(doc.id, Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
+    err(await uc.GetDocumentFile(repo, storage)(DOCTOR, doc.id, Disposition.ATTACHMENT), ErrorKind.NOT_FOUND)
 
 
 async def test_delete_removes_row_and_file_only_for_managers(repo, storage):
@@ -153,9 +153,9 @@ async def test_delete_removes_row_and_file_only_for_managers(repo, storage):
 
 async def test_list_and_search(repo, storage):
     ok(await upload(repo, storage))
-    assert len(await uc.ListDocuments(repo)()) == 1
-    assert len(await uc.ListDocuments(repo)("inform")) == 1
-    assert await uc.ListDocuments(repo)("nada") == []
+    assert len(ok(await uc.ListDocuments(repo)(DOCTOR))) == 1
+    assert len(ok(await uc.ListDocuments(repo)(DOCTOR, "inform"))) == 1
+    assert ok(await uc.ListDocuments(repo)(DOCTOR, "nada")) == []
 
 
 # ---------- adaptador de disco ----------
@@ -174,3 +174,9 @@ def test_local_storage_roundtrip_and_key_guard(tmp_path):
     with pytest.raises(ValueError):
         storage.save("../fuera.pdf", PDF)
     assert not list(tmp_path.rglob(".upload-*"))  # sin temporales huérfanos
+
+
+async def test_reading_documents_requires_a_session(tmp_path):
+    repo, storage = FakeDocuments(), FakeStorage(tmp_path)
+    err(await uc.ListDocuments(repo)(None), ErrorKind.UNAUTHENTICATED)
+    err(await uc.GetDocumentFile(repo, storage)(None, uuid4(), Disposition.INLINE), ErrorKind.UNAUTHENTICATED)

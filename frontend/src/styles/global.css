@@ -225,13 +225,6 @@
     border-radius: 4px;
   }
 
-  .guest-badge {
-    font-size: 0.85rem;
-    color: var(--holh-muted);
-    padding: 0.35rem 0.75rem;
-    background: var(--holh-cream);
-    border-radius: var(--radius);
-  }
 
   /* Navigation */
   .main-nav {
@@ -1260,6 +1253,79 @@
     }
   }
 
+  /* Login */
+  .login-page {
+    display: grid;
+    place-items: center;
+    padding: 1rem 0 2rem;
+  }
+
+  .login-card {
+    width: 100%;
+    max-width: 420px;
+    overflow: hidden;
+    background: var(--holh-white);
+    border: 1px solid var(--holh-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  .login-card-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, var(--holh-blue) 0%, var(--holh-blue-light) 100%);
+    color: white;
+  }
+
+  .login-card-header h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+  }
+
+  .login-card-header p {
+    margin-top: 0.15rem;
+    font-size: 0.82rem;
+    opacity: 0.85;
+  }
+
+  .login-card-body {
+    display: grid;
+    gap: 1rem;
+    padding: 1.25rem;
+  }
+
+  .login-notice {
+    padding: 0.6rem 0.8rem;
+    border-left: 3px solid var(--holh-teal);
+    background: #eef6f7;
+    border-radius: 4px;
+    font-size: 0.88rem;
+  }
+
+  .login-help {
+    color: var(--holh-muted);
+    font-size: 0.82rem;
+  }
+
+  .login-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 0.85rem;
+    border: 1px solid var(--holh-border);
+    border-radius: var(--radius);
+    color: var(--holh-blue);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+
+  .login-link:hover {
+    background: var(--holh-cream);
+  }
+
   /* Search */
   .search-bar {
     margin-bottom: 1.25rem;
@@ -1339,9 +1405,8 @@
     margin-bottom: 0.5rem;
   }
 
-  /* Contact & access */
-  .contact-card,
-  .access-notice {
+  /* Contact */
+  .contact-card {
     background: var(--holh-white);
     padding: 2rem;
     border-radius: var(--radius-lg);
@@ -1397,18 +1462,7 @@
     margin-bottom: 0.2rem;
   }
 
-  .access-notice {
-    text-align: center;
-    padding: 3rem 2rem;
-  }
 
-  .access-notice p {
-    margin-bottom: 1.25rem;
-    color: var(--holh-muted);
-    max-width: 400px;
-    margin-left: auto;
-    margin-right: auto;
-  }
 
   /* Links */
   .links-list {
