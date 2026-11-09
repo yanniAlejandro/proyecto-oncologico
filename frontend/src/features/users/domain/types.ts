@@ -9,11 +9,21 @@ export interface UserAccount {
   permissions: Section[];
 }
 
-export interface NewDoctorInput {
+export interface NewUserInput {
   email: string;
   password: string;
   full_name: string;
+  role: UserRole;
+  permissions: Section[];
 }
 
-/** Solo las cuentas de médico activas se pueden desactivar (regla del backend). */
-export const canDeactivate = (u: UserAccount) => u.is_active && u.role === "medico";
+export interface UserChanges {
+  full_name?: string;
+  role?: UserRole;
+  is_active?: boolean;
+  permissions?: Section[];
+  password?: string;
+}
+
+/** Salvaguardas del backend, para no ofrecer acciones que fallarían. */
+export const isSelf = (u: UserAccount, currentUserId: string) => u.id === currentUserId;

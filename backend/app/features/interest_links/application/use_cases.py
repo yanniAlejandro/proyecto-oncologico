@@ -21,6 +21,18 @@ class ListActiveLinks:
         return await self._links.list_active()
 
 
+class ListAllLinks:
+    """Incluye los ocultos: solo para gestión."""
+
+    def __init__(self, links: InterestLinkRepository) -> None:
+        self._links = links
+
+    async def __call__(self, actor: Actor | None) -> Result[list[InterestLink]]:
+        if isinstance(auth := require_section(actor, Section.ENLACES), Err):
+            return auth
+        return Ok(await self._links.list_all())
+
+
 class CreateLink:
     def __init__(self, links: InterestLinkRepository) -> None:
         self._links = links

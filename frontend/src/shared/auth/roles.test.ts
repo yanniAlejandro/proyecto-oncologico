@@ -1,4 +1,4 @@
-import { can, canReadClinical, canUsePanel, isAdmin, isRouteAllowed } from "./roles";
+import { adminNavFor, can, canReadClinical, canUsePanel, isAdmin, isRouteAllowed } from "./roles";
 
 const admin = { role: "administrador" as const, permissions: [] };
 const editor = { role: "medico" as const, permissions: ["publicaciones" as const, "documentos" as const] };
@@ -24,13 +24,21 @@ describe("permisos (espejo del backend)", () => {
     expect(canReadClinical(null)).toBe(false);
   });
 
-  it("protege las rutas de gestión en el servidor", () => {
-    expect(isRouteAllowed("/gestion/publicaciones", editor)).toBe(true);
-    expect(isRouteAllowed("/gestion/publicaciones", doctor)).toBe(false);
-    expect(isRouteAllowed("/gestion/publicaciones/", null)).toBe(false);
-    expect(isRouteAllowed("/gestion/usuarios", editor)).toBe(false);
-    expect(isRouteAllowed("/gestion/usuarios", admin)).toBe(true);
-    expect(isRouteAllowed("/gestion/publicacionesX", null)).toBe(true); // no es prefijo de ruta
+  it("el menú del panel solo muestra lo concedido", () => {
+    expect(adminNavFor(editor).map((i) => i.href)).toEqual(["/admin", "/admin/publicaciones", "/admin/documentos"]);
+    expect(adminNavFor(admin)).toHaveLength(11);
+    expect(adminNavFor(doctor)).toEqual([]);
+  });
+
+  it("protege el panel en el servidor (la regla más específica gana)", () => {
+    expect(isRouteAllowed("/admin", editor)).toBe(true);
+    expect(isRouteAllowed("/admin/publicaciones", editor)).toBe(true);
+    expect(isRouteAllowed("/admin/guias", editor)).toBe(false);
+    expect(isRouteAllowed("/admin/usuarios", editor)).toBe(false);
+    expect(isRouteAllowed("/admin/usuarios", admin)).toBe(true);
+    expect(isRouteAllowed("/admin", doctor)).toBe(false);
+    expect(isRouteAllowed("/admin/", null)).toBe(false);
+    expect(isRouteAllowed("/administracion", null)).toBe(true); // no es prefijo de ruta
     expect(isRouteAllowed("/documentos", null)).toBe(true);
   });
 });

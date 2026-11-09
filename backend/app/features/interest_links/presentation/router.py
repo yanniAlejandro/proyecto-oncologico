@@ -63,6 +63,11 @@ async def list_links(repo: Repo):
     return [InterestLinkOut.of(link) for link in await uc.ListActiveLinks(repo)()]
 
 
+@router.get("/manage", response_model=list[InterestLinkOut])
+async def list_all_links(repo: Repo, actor: CurrentActor):
+    return [InterestLinkOut.of(link) for link in unwrap(await uc.ListAllLinks(repo)(actor))]
+
+
 @router.post("", response_model=InterestLinkOut, status_code=status.HTTP_201_CREATED)
 async def create_link(payload: InterestLinkCreate, repo: Repo, actor: CurrentActor):
     return InterestLinkOut.of(unwrap(await uc.CreateLink(repo)(actor, payload.model_dump())))

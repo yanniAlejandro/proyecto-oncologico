@@ -1,0 +1,13 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createDiseasesApi } from "@/features/diseases/infrastructure/diseases.api";
+import { DiseasesManager } from "@/features/diseases/presentation/DiseasesManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createDiseasesApi(serverTransport(Astro.locals.token)).list());
+---
+
+<AdminLayout title="Enfermedades">
+  {error ? <Alert>{error}</Alert> : <DiseasesManager client:load initialItems={data ?? []} />}
+</AdminLayout>

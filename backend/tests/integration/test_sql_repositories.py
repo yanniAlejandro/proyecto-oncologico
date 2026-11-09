@@ -137,3 +137,14 @@ async def test_helpline_config_singleton_and_professional_slots_roundtrip(sessio
     assert updated.slots == [] and not updated.is_active
     assert await repo.list_professionals(active_only=True) == []
     assert await repo.delete_professional(pro.id)
+
+
+async def test_disease_usage_counts_guides_and_protocols(session):
+    user = await author(session)
+    diseases = SqlDiseaseRepository(session)
+    d = await diseases.add("Neuroblastoma", None)
+    assert await diseases.usage(d.id) == 0
+    for kind in ContentKind:
+        await SqlClinicalContentRepository(session, kind).add(ClinicalDraft(d.id, f"Doc {kind}", "contenido"), user.id)
+    assert await diseases.usage(d.id) == 2
+    assert (await diseases.update(d.id, {"description": "Tumor sólido"})).description == "Tumor sólido"

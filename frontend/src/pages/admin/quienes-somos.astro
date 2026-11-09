@@ -1,0 +1,13 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createAboutApi } from "@/features/about/infrastructure/about.api";
+import { AboutManager } from "@/features/about/presentation/AboutManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createAboutApi(serverTransport(Astro.locals.token)).list());
+---
+
+<AdminLayout title="Quiénes somos">
+  {error ? <Alert>{error}</Alert> : <AboutManager client:load initialItems={data ?? []} />}
+</AdminLayout>

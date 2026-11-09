@@ -1,5 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
-import { isRouteAllowed, type SessionUser } from "@/shared/auth/roles";
+import { isRouteAllowed, LEGACY_REDIRECTS, type SessionUser } from "@/shared/auth/roles";
 import { clearSessionToken, readSessionToken } from "@/shared/auth/session";
 import { serverTransport } from "@/shared/api/server";
 import { ApiError } from "@/shared/api/transport";
@@ -30,7 +30,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     }
   }
 
+  const legacy = LEGACY_REDIRECTS[context.url.pathname.replace(/\/$/, "")];
+  if (legacy) return context.redirect(legacy, 301);
+
   if (!isRouteAllowed(context.url.pathname, context.locals.user)) {
+    // Sin sesión → portada (con el acceso); con sesión pero sin permiso → panel o portada.
     return context.redirect("/", 302);
   }
 

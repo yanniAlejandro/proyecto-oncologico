@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.diseases.domain.model import Disease
@@ -30,6 +30,30 @@ class SqlDiseaseRepository:
         q = select(DiseaseRow).where(func.lower(DiseaseRow.name) == name.lower())
         row = (await self._s.execute(q)).scalar_one_or_none()
         return to_domain(row) if row else None
+
+    async def update(self, disease_id: UUID, changes: dict[str, object]) -> Disease | None:
+        row = await self._s.get(DiseaseRow, disease_id)
+        if row is None:
+            return None
+        for key, value in changes.items():
+            setattr(row, key, value)
+        await self._s.commit()
+        await self._s.refresh(row)
+        return to_domain(row)
+
+    async def usage(self, disease_id: UUID) -> int:
+        from app.features.clinical_content.infrastructure.orm import DiagnosticGuideRow, TreatmentProtocolRow
+
+        total = 0
+        for model in (DiagnosticGuideRow, TreatmentProtocolRow):
+            q = select(func.count()).select_from(model).where(model.disease_id == disease_id)
+            total += int((await self._s.execute(q)).scalar_one())
+        return total
+
+    async def delete(self, disease_id: UUID) -> bool:
+        result = await self._s.execute(delete(DiseaseRow).where(DiseaseRow.id == disease_id))
+        await self._s.commit()
+        return bool(result.rowcount)
 
     async def add(self, name: str, description: str | None) -> Disease:
         row = DiseaseRow(name=name, description=description)

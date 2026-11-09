@@ -6,3 +6,5 @@ export interface InterestLink {
   sort_order: number;
   is_active: boolean;
 }
+
+export type LinkInput = Omit<InterestLink, "id">;

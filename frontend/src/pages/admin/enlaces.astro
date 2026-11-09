@@ -1,0 +1,13 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createLinksApi } from "@/features/links/infrastructure/links.api";
+import { LinksManager } from "@/features/links/presentation/LinksManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createLinksApi(serverTransport(Astro.locals.token)).listAll());
+---
+
+<AdminLayout title="Enlaces de interés">
+  {error ? <Alert>{error}</Alert> : <LinksManager client:load initialItems={data ?? []} />}
+</AdminLayout>

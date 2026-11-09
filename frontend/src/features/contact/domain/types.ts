@@ -7,3 +7,5 @@ export interface ContactInfo {
   schedule: string | null;
   map_url: string | null;
 }
+
+export type ContactInput = Omit<ContactInfo, "id">;

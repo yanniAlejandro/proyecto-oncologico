@@ -1,15 +1,10 @@
 ---
-import "@/styles/global.css";
-import sans400 from "@fontsource/source-sans-3/files/source-sans-3-latin-400-normal.woff2?url";
-import sans500 from "@fontsource/source-sans-3/files/source-sans-3-latin-500-normal.woff2?url";
-import sans600 from "@fontsource/source-sans-3/files/source-sans-3-latin-600-normal.woff2?url";
-import sans700 from "@fontsource/source-sans-3/files/source-sans-3-latin-700-normal.woff2?url";
-import { ClientRouter } from "astro:transitions";
+import HeadCommon from "./HeadCommon.astro";
 import { HospitalLogo } from "@/components/site/HospitalLogo";
 import { summarizeSlots, telHref } from "@/features/helpline/domain/types";
 import { getHelplineCached } from "@/features/helpline/infrastructure/helpline.server";
 import HelplineStatus from "@/features/helpline/presentation/HelplineStatus.astro";
-import { can, isAdmin } from "@/shared/auth/roles";
+import { canUsePanel } from "@/shared/auth/roles";
 
 interface Props {
   title?: string;
@@ -32,12 +27,6 @@ const navItems = [
   { href: "/linea-de-ayuda", label: "Línea de ayuda" },
   { href: "/contacto", label: "Contacto" },
 ];
-const adminItems = [
-  ...(can(user, "publicaciones") ? [{ href: "/gestion/publicaciones", label: "Gestión Publicaciones" }] : []),
-  ...(can(user, "quienes_somos") ? [{ href: "/gestion/quienes-somos", label: "Gestión Quiénes somos" }] : []),
-  ...(can(user, "linea_ayuda") ? [{ href: "/gestion/linea-ayuda", label: "Gestión Línea de ayuda" }] : []),
-  ...(isAdmin(user) ? [{ href: "/gestion/usuarios", label: "Gestión Usuarios" }] : []),
-];
 const isActive = (href: string) => (href === "/" ? path === "/" : path === href || path.startsWith(`${href}/`));
 const roleLabel = user?.role === "medico" ? "médico" : user?.role;
 ---
@@ -46,17 +35,7 @@ const roleLabel = user?.role === "medico" ? "médico" : user?.role;
 <!-- Navegación sin recarga (como el SPA original): sin animación para no alterar el aspecto. -->
 <html lang="es" transition:animate="none">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
-    <link rel="icon" type="image/svg+xml" href="/logo-holh.svg" />
-    <title>{pageTitle}</title>
-    {
-      [sans400, sans500, sans600, sans700].map((href) => (
-        <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
-      ))
-    }
-    <ClientRouter fallback="swap" />
+    <HeadCommon title={pageTitle} description={description} />
   </head>
   <body>
     <a href="#contenido" class="skip-link">Saltar al contenido</a>
@@ -129,15 +108,11 @@ const roleLabel = user?.role === "medico" ? "médico" : user?.role;
               ))
             }
             {
-              adminItems.map((item, i) => (
-                <a
-                  href={item.href}
-                  class:list={["nav-admin", { "nav-admin-first": i === 0, active: isActive(item.href) }]}
-                  aria-current={isActive(item.href) ? "page" : undefined}
-                >
-                  {item.label}
+              canUsePanel(user) && (
+                <a href="/admin" class="nav-admin nav-admin-first">
+                  Panel de gestión
                 </a>
-              ))
+              )
             }
           </div>
         </nav>

@@ -1,0 +1,20 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createDocumentsApi } from "@/features/documents/infrastructure/documents.api";
+import { DocumentsPage } from "@/features/documents/presentation/DocumentsPage";
+import { load, serverTransport } from "@/shared/api/server";
+
+const api = createDocumentsApi(serverTransport(Astro.locals.token));
+const [documents, policy] = await Promise.all([load(() => api.list()), load(() => api.uploadPolicy())]);
+---
+
+<AdminLayout title="Documentos">
+  {
+    documents.error ? (
+      <Alert>{documents.error}</Alert>
+    ) : (
+      <DocumentsPage client:load initialItems={documents.data ?? []} canManage policy={policy.data ?? undefined} />
+    )
+  }
+</AdminLayout>

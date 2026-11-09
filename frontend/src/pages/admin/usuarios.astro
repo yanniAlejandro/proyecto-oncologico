@@ -1,0 +1,14 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createUsersApi } from "@/features/users/infrastructure/users.api";
+import { UsersManager } from "@/features/users/presentation/UsersManager";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { user, token } = Astro.locals;
+const { data, error } = await load(() => createUsersApi(serverTransport(token)).list());
+---
+
+<AdminLayout title="Usuarios y permisos">
+  {error ? <Alert>{error}</Alert> : <UsersManager client:load initialItems={data ?? []} currentUserId={user!.id} />}
+</AdminLayout>

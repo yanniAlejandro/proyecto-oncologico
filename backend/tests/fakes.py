@@ -112,6 +112,7 @@ class FakeUsers:
 class FakeDiseases:
     def __init__(self, *names: str) -> None:
         self.rows: dict[UUID, Disease] = {}
+        self.in_use: dict[UUID, int] = {}
         for name in names:
             d = Disease(id=uuid4(), name=name)
             self.rows[d.id] = d
@@ -133,6 +134,18 @@ class FakeDiseases:
         d = Disease(id=uuid4(), name=name, description=description)
         self.rows[d.id] = d
         return d
+
+    async def update(self, disease_id: UUID, changes: dict[str, object]) -> Disease | None:
+        if disease_id not in self.rows:
+            return None
+        self.rows[disease_id] = replace(self.rows[disease_id], **changes)
+        return self.rows[disease_id]
+
+    async def usage(self, disease_id: UUID) -> int:
+        return self.in_use.get(disease_id, 0)
+
+    async def delete(self, disease_id: UUID) -> bool:
+        return self.rows.pop(disease_id, None) is not None
 
 
 class FakePublications:
@@ -370,6 +383,9 @@ class FakeLinks:
 
     async def list_active(self) -> list[InterestLink]:
         return sorted((link for link in self.rows.values() if link.is_active), key=lambda link: link.sort_order)
+
+    async def list_all(self) -> list[InterestLink]:
+        return sorted(self.rows.values(), key=lambda link: link.sort_order)
 
     async def add(self, data: dict[str, object]) -> InterestLink:
         defaults: dict[str, object] = {"description": None, "sort_order": 0, "is_active": True}

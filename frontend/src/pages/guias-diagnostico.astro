@@ -5,16 +5,13 @@ import { Alert } from "@/components/ui/alert";
 import { LoginDialog } from "@/features/auth/presentation/LoginDialog";
 import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.api";
 import { ClinicalDocsPage } from "@/features/clinical/presentation/ClinicalDocsPage";
-import { createDiseasesApi } from "@/features/diseases/infrastructure/diseases.api";
 import { load, serverTransport } from "@/shared/api/server";
-import { can, canReadClinical } from "@/shared/auth/roles";
+import { canReadClinical } from "@/shared/auth/roles";
 
 const { user, token } = Astro.locals;
 const canRead = canReadClinical(user);
-const canManage = can(user, "guias");
 const t = serverTransport(token);
 const guides = canRead ? await load(() => createClinicalApi(t, "guide").list()) : null;
-const diseases = canManage ? await load(() => createDiseasesApi(t).list()) : null;
 ---
 
 <BaseLayout title="Guías de Diagnóstico">
@@ -42,8 +39,8 @@ const diseases = canManage ? await load(() => createDiseasesApi(t).list()) : nul
         client:load
         kind="guide"
         initialItems={guides?.data ?? []}
-        diseases={diseases?.data ?? []}
-        canManage={canManage}
+        diseases={[]}
+        canManage={false}
       />
     )
   }

@@ -26,6 +26,8 @@ MATRIX = [
     ("GET", "/api/v1/publications", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/about", None, [200, 200, 200, 200]),
     ("GET", "/api/v1/helpline", None, [200, 200, 200, 200]),
+    ("GET", "/api/v1/interest-links/manage", None, [401, 403, 200, 200]),
+    ("DELETE", "/api/v1/diseases/00000000-0000-0000-0000-000000000000", None, [401, 403, 404, 404]),
     ("GET", "/api/v1/helpline/professionals", None, [401, 403, 200, 200]),
     ("PUT", "/api/v1/helpline", {"phone": "+53 7 649 0000"}, [401, 403, 200, 200]),
     ("POST", "/api/v1/publications/preview", {"url": "https://desconocida.cu"}, [401, 403, 200, 200]),

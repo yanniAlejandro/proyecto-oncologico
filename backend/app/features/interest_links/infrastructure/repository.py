@@ -21,6 +21,10 @@ class SqlInterestLinkRepository:
         q = select(InterestLinkRow).where(InterestLinkRow.is_active.is_(True)).order_by(InterestLinkRow.sort_order)
         return [to_domain(r) for r in (await self._s.execute(q)).scalars().all()]
 
+    async def list_all(self) -> list[InterestLink]:
+        q = select(InterestLinkRow).order_by(InterestLinkRow.sort_order, InterestLinkRow.title)
+        return [to_domain(r) for r in (await self._s.execute(q)).scalars().all()]
+
     async def add(self, data: dict[str, object]) -> InterestLink:
         row = InterestLinkRow(**data)
         self._s.add(row)

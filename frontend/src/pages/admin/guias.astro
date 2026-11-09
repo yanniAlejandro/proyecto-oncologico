@@ -1,0 +1,25 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createClinicalApi } from "@/features/clinical/infrastructure/clinical.api";
+import { ClinicalDocsPage } from "@/features/clinical/presentation/ClinicalDocsPage";
+import { createDiseasesApi } from "@/features/diseases/infrastructure/diseases.api";
+import { load, serverTransport } from "@/shared/api/server";
+
+const t = serverTransport(Astro.locals.token);
+const [docs, diseases] = await Promise.all([
+  load(() => createClinicalApi(t, "guide").list()),
+  load(() => createDiseasesApi(t).list()),
+]);
+const error = docs.error ?? diseases.error;
+---
+
+<AdminLayout title="Guías de diagnóstico">
+  {
+    error ? (
+      <Alert>{error}</Alert>
+    ) : (
+      <ClinicalDocsPage client:load kind="guide" initialItems={docs.data ?? []} diseases={diseases.data ?? []} canManage />
+    )
+  }
+</AdminLayout>

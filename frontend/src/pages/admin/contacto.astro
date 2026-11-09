@@ -1,0 +1,13 @@
+---
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { Alert } from "@/components/ui/alert";
+import { createContactApi } from "@/features/contact/infrastructure/contact.api";
+import { ContactEditor } from "@/features/contact/presentation/ContactEditor";
+import { load, serverTransport } from "@/shared/api/server";
+
+const { data, error } = await load(() => createContactApi(serverTransport(Astro.locals.token)).get());
+---
+
+<AdminLayout title="Contacto">
+  {error || !data ? <Alert>{error}</Alert> : <ContactEditor client:load initial={data} />}
+</AdminLayout>
